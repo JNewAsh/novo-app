@@ -1,1127 +1,1908 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import { useState, useEffect } from "react";
 import { 
-  Apple, 
-  Carrot, 
-  Leaf, 
-  Droplets, 
-  TrendingUp, 
-  Calendar, 
-  Target,
-  ChefHat,
-  Sparkles,
-  Check,
-  Crown,
-  Lock,
-  Heart,
-  Activity
-} from 'lucide-react';
+  Search, Leaf, Heart, Clock, BookOpen, Apple, Sparkles, 
+  TrendingUp, Target, Droplet, Activity, ChefHat, Lock,
+  Calendar, Plus, Minus, Award, Info, X
+} from "lucide-react";
 
-interface NutritionEntry {
-  date: string;
-  protein: number;
-  fiber: number;
-  water: number;
+// ==================== TIPOS ====================
+interface Produto {
+  id: string;
+  nome: string;
+  categoria: "Condimento" | "Erva" | "Erva Medicinal" | "Fruta" | "Legume";
+  beneficios: string[];
+  tabelaNutricional: {
+    calorias: string;
+    proteinas: string;
+    carboidratos: string;
+    fibras: string;
+    gorduras: string;
+    vitaminas: string[];
+    minerais: string[];
+  };
+  propriedadesMedicinais?: string[];
 }
 
-interface Goals {
-  protein: number;
-  fiber: number;
-  water: number;
-}
-
-interface CatalogItem {
-  name: string;
-  benefits: string;
-  category: string;
-  nutrition: {
-    calories: string;
-    protein: string;
-    carbs: string;
-    fiber: string;
-    vitamins: string;
+interface Receita {
+  id: string;
+  nome: string;
+  tipo: "Vegana" | "Vegetariana" | "Geral";
+  categoria: "Café da Manhã" | "Almoço" | "Jantar" | "Lanche" | "Sobremesa";
+  ingredientes: string[];
+  modoPreparo: string[];
+  tempoPreparo: string;
+  porcoes: number;
+  beneficios: string[];
+  valorNutricional: {
+    calorias: string;
+    proteinas: string;
+    carboidratos: string;
+    fibras: string;
   };
 }
 
-export default function FitoSaudePage() {
-  const [activeTab, setActiveTab] = useState('dashboard');
+interface RegistroNutricional {
+  data: string;
+  proteinas: number;
+  fibras: number;
+  agua: number;
+  calorias: number;
+}
+
+interface Meta {
+  proteinas: number;
+  fibras: number;
+  agua: number;
+  calorias: number;
+}
+
+// ==================== BASE DE DADOS - PRODUTOS ====================
+const produtosDB: Produto[] = [
+  // CONDIMENTOS
+  {
+    id: "c1",
+    nome: "Açafrão-da-terra (Cúrcuma)",
+    categoria: "Condimento",
+    beneficios: ["Anti-inflamatório potente", "Antioxidante", "Melhora digestão", "Fortalece imunidade"],
+    tabelaNutricional: {
+      calorias: "312 kcal/100g",
+      proteinas: "9.7g",
+      carboidratos: "67g",
+      fibras: "22.7g",
+      gorduras: "3.2g",
+      vitaminas: ["Vitamina C", "Vitamina E", "Vitamina K", "Niacina"],
+      minerais: ["Ferro", "Potássio", "Magnésio", "Manganês"]
+    },
+    propriedadesMedicinais: ["Curcumina combate inflamações", "Protege o fígado", "Auxilia na saúde cerebral"]
+  },
+  {
+    id: "c2",
+    nome: "Gengibre",
+    categoria: "Condimento",
+    beneficios: ["Alivia náuseas", "Anti-inflamatório", "Melhora circulação", "Fortalece imunidade"],
+    tabelaNutricional: {
+      calorias: "80 kcal/100g",
+      proteinas: "1.8g",
+      carboidratos: "17.8g",
+      fibras: "2g",
+      gorduras: "0.8g",
+      vitaminas: ["Vitamina C", "Vitamina B6", "Niacina"],
+      minerais: ["Potássio", "Magnésio", "Fósforo", "Zinco"]
+    },
+    propriedadesMedicinais: ["Gingerol combate inflamações", "Alivia dores musculares", "Melhora digestão"]
+  },
+  {
+    id: "c3",
+    nome: "Alho",
+    categoria: "Condimento",
+    beneficios: ["Reduz pressão arterial", "Antibiótico natural", "Reduz colesterol", "Antioxidante"],
+    tabelaNutricional: {
+      calorias: "149 kcal/100g",
+      proteinas: "6.4g",
+      carboidratos: "33g",
+      fibras: "2.1g",
+      gorduras: "0.5g",
+      vitaminas: ["Vitamina C", "Vitamina B6", "Tiamina"],
+      minerais: ["Manganês", "Selênio", "Cálcio", "Fósforo"]
+    },
+    propriedadesMedicinais: ["Alicina combate bactérias", "Protege coração", "Fortalece imunidade"]
+  },
+  {
+    id: "c4",
+    nome: "Canela",
+    categoria: "Condimento",
+    beneficios: ["Regula açúcar no sangue", "Antioxidante", "Anti-inflamatório", "Melhora digestão"],
+    tabelaNutricional: {
+      calorias: "247 kcal/100g",
+      proteinas: "4g",
+      carboidratos: "81g",
+      fibras: "53g",
+      gorduras: "1.2g",
+      vitaminas: ["Vitamina K", "Vitamina E", "Niacina"],
+      minerais: ["Cálcio", "Ferro", "Manganês", "Magnésio"]
+    },
+    propriedadesMedicinais: ["Cinamaldeído regula glicose", "Combate fungos e bactérias"]
+  },
+  {
+    id: "c5",
+    nome: "Pimenta-do-reino",
+    categoria: "Condimento",
+    beneficios: ["Melhora absorção de nutrientes", "Antioxidante", "Melhora digestão", "Anti-inflamatório"],
+    tabelaNutricional: {
+      calorias: "251 kcal/100g",
+      proteinas: "10.4g",
+      carboidratos: "64g",
+      fibras: "25g",
+      gorduras: "3.3g",
+      vitaminas: ["Vitamina K", "Vitamina C", "Vitamina E"],
+      minerais: ["Ferro", "Manganês", "Potássio", "Cobre"]
+    },
+    propriedadesMedicinais: ["Piperina aumenta absorção em 2000%", "Estimula enzimas digestivas"]
+  },
+  {
+    id: "c6",
+    nome: "Cominho",
+    categoria: "Condimento",
+    beneficios: ["Melhora digestão", "Rico em ferro", "Antioxidante", "Controla diabetes"],
+    tabelaNutricional: {
+      calorias: "375 kcal/100g",
+      proteinas: "17.8g",
+      carboidratos: "44g",
+      fibras: "10.5g",
+      gorduras: "22.3g",
+      vitaminas: ["Vitamina A", "Vitamina C", "Vitamina E", "Vitamina K"],
+      minerais: ["Ferro", "Cálcio", "Magnésio", "Fósforo"]
+    }
+  },
+  {
+    id: "c7",
+    nome: "Páprica",
+    categoria: "Condimento",
+    beneficios: ["Rica em vitamina A", "Antioxidante", "Melhora circulação", "Anti-inflamatório"],
+    tabelaNutricional: {
+      calorias: "282 kcal/100g",
+      proteinas: "14.1g",
+      carboidratos: "54g",
+      fibras: "34.9g",
+      gorduras: "12.9g",
+      vitaminas: ["Vitamina A", "Vitamina E", "Vitamina B6", "Vitamina K"],
+      minerais: ["Ferro", "Potássio", "Magnésio", "Fósforo"]
+    }
+  },
+  {
+    id: "c8",
+    nome: "Orégano",
+    categoria: "Condimento",
+    beneficios: ["Antibacteriano", "Antioxidante potente", "Anti-inflamatório", "Melhora digestão"],
+    tabelaNutricional: {
+      calorias: "265 kcal/100g",
+      proteinas: "9g",
+      carboidratos: "69g",
+      fibras: "42.5g",
+      gorduras: "4.3g",
+      vitaminas: ["Vitamina K", "Vitamina E", "Vitamina A"],
+      minerais: ["Cálcio", "Ferro", "Manganês", "Magnésio"]
+    },
+    propriedadesMedicinais: ["Carvacrol combate bactérias", "Timol é antifúngico"]
+  },
+
+  // ERVAS
+  {
+    id: "e1",
+    nome: "Manjericão",
+    categoria: "Erva",
+    beneficios: ["Antioxidante", "Anti-inflamatório", "Antibacteriano", "Reduz estresse"],
+    tabelaNutricional: {
+      calorias: "23 kcal/100g",
+      proteinas: "3.2g",
+      carboidratos: "2.7g",
+      fibras: "1.6g",
+      gorduras: "0.6g",
+      vitaminas: ["Vitamina K", "Vitamina A", "Vitamina C", "Folato"],
+      minerais: ["Cálcio", "Ferro", "Magnésio", "Potássio"]
+    }
+  },
+  {
+    id: "e2",
+    nome: "Salsa",
+    categoria: "Erva",
+    beneficios: ["Rica em vitamina K", "Antioxidante", "Diurético natural", "Fortalece ossos"],
+    tabelaNutricional: {
+      calorias: "36 kcal/100g",
+      proteinas: "3g",
+      carboidratos: "6.3g",
+      fibras: "3.3g",
+      gorduras: "0.8g",
+      vitaminas: ["Vitamina K", "Vitamina C", "Vitamina A", "Folato"],
+      minerais: ["Ferro", "Potássio", "Cálcio", "Magnésio"]
+    }
+  },
+  {
+    id: "e3",
+    nome: "Coentro",
+    categoria: "Erva",
+    beneficios: ["Desintoxicante", "Melhora digestão", "Antioxidante", "Reduz açúcar no sangue"],
+    tabelaNutricional: {
+      calorias: "23 kcal/100g",
+      proteinas: "2.1g",
+      carboidratos: "3.7g",
+      fibras: "2.8g",
+      gorduras: "0.5g",
+      vitaminas: ["Vitamina K", "Vitamina A", "Vitamina C"],
+      minerais: ["Potássio", "Cálcio", "Magnésio", "Fósforo"]
+    }
+  },
+  {
+    id: "e4",
+    nome: "Cebolinha",
+    categoria: "Erva",
+    beneficios: ["Rica em vitamina K", "Antioxidante", "Melhora digestão", "Fortalece imunidade"],
+    tabelaNutricional: {
+      calorias: "30 kcal/100g",
+      proteinas: "3.3g",
+      carboidratos: "4.4g",
+      fibras: "2.5g",
+      gorduras: "0.7g",
+      vitaminas: ["Vitamina K", "Vitamina C", "Vitamina A", "Folato"],
+      minerais: ["Cálcio", "Ferro", "Potássio", "Magnésio"]
+    }
+  },
+  {
+    id: "e5",
+    nome: "Tomilho",
+    categoria: "Erva",
+    beneficios: ["Antibacteriano", "Antioxidante", "Melhora respiração", "Anti-inflamatório"],
+    tabelaNutricional: {
+      calorias: "101 kcal/100g",
+      proteinas: "5.6g",
+      carboidratos: "24g",
+      fibras: "14g",
+      gorduras: "1.7g",
+      vitaminas: ["Vitamina C", "Vitamina A", "Vitamina K"],
+      minerais: ["Ferro", "Manganês", "Cálcio", "Magnésio"]
+    }
+  },
+  {
+    id: "e6",
+    nome: "Alecrim",
+    categoria: "Erva",
+    beneficios: ["Melhora memória", "Antioxidante", "Anti-inflamatório", "Melhora circulação"],
+    tabelaNutricional: {
+      calorias: "131 kcal/100g",
+      proteinas: "3.3g",
+      carboidratos: "20.7g",
+      fibras: "14.1g",
+      gorduras: "5.9g",
+      vitaminas: ["Vitamina A", "Vitamina C", "Vitamina B6"],
+      minerais: ["Cálcio", "Ferro", "Magnésio", "Manganês"]
+    }
+  },
+
+  // ERVAS MEDICINAIS
+  {
+    id: "em1",
+    nome: "Camomila",
+    categoria: "Erva Medicinal",
+    beneficios: ["Calmante natural", "Melhora sono", "Anti-inflamatório", "Alivia cólicas"],
+    tabelaNutricional: {
+      calorias: "1 kcal/100ml (chá)",
+      proteinas: "0g",
+      carboidratos: "0.2g",
+      fibras: "0g",
+      gorduras: "0g",
+      vitaminas: ["Vitamina A (traços)"],
+      minerais: ["Potássio", "Cálcio", "Magnésio"]
+    },
+    propriedadesMedicinais: ["Apigenina induz relaxamento", "Bisabolol anti-inflamatório", "Melhora qualidade do sono"]
+  },
+  {
+    id: "em2",
+    nome: "Hortelã",
+    categoria: "Erva Medicinal",
+    beneficios: ["Melhora digestão", "Alivia náuseas", "Refrescante", "Alivia dor de cabeça"],
+    tabelaNutricional: {
+      calorias: "70 kcal/100g",
+      proteinas: "3.8g",
+      carboidratos: "14.9g",
+      fibras: "8g",
+      gorduras: "0.9g",
+      vitaminas: ["Vitamina A", "Vitamina C", "Folato"],
+      minerais: ["Ferro", "Manganês", "Potássio", "Cálcio"]
+    },
+    propriedadesMedicinais: ["Mentol relaxa músculos digestivos", "Alivia síndrome do intestino irritável"]
+  },
+  {
+    id: "em3",
+    nome: "Boldo",
+    categoria: "Erva Medicinal",
+    beneficios: ["Protege fígado", "Melhora digestão", "Alivia gases", "Desintoxicante"],
+    tabelaNutricional: {
+      calorias: "2 kcal/100ml (chá)",
+      proteinas: "0.1g",
+      carboidratos: "0.4g",
+      fibras: "0g",
+      gorduras: "0g",
+      vitaminas: ["Vitamina C (traços)"],
+      minerais: ["Potássio", "Magnésio"]
+    },
+    propriedadesMedicinais: ["Boldina estimula bile", "Protege células hepáticas", "Antioxidante"]
+  },
+  {
+    id: "em4",
+    nome: "Erva-cidreira (Melissa)",
+    categoria: "Erva Medicinal",
+    beneficios: ["Calmante", "Melhora humor", "Alivia ansiedade", "Melhora sono"],
+    tabelaNutricional: {
+      calorias: "1 kcal/100ml (chá)",
+      proteinas: "0g",
+      carboidratos: "0.3g",
+      fibras: "0g",
+      gorduras: "0g",
+      vitaminas: ["Vitamina C (traços)"],
+      minerais: ["Potássio", "Cálcio", "Magnésio"]
+    },
+    propriedadesMedicinais: ["Ácido rosmarínico reduz ansiedade", "Melhora função cognitiva"]
+  },
+  {
+    id: "em5",
+    nome: "Valeriana",
+    categoria: "Erva Medicinal",
+    beneficios: ["Induz sono profundo", "Reduz ansiedade", "Relaxante muscular", "Não causa dependência"],
+    tabelaNutricional: {
+      calorias: "2 kcal/100ml (chá)",
+      proteinas: "0.1g",
+      carboidratos: "0.5g",
+      fibras: "0g",
+      gorduras: "0g",
+      vitaminas: ["Vitamina B (traços)"],
+      minerais: ["Cálcio", "Magnésio", "Potássio"]
+    },
+    propriedadesMedicinais: ["Ácido valerênico aumenta GABA", "Melhora qualidade do sono", "Reduz tempo para adormecer"]
+  },
+  {
+    id: "em6",
+    nome: "Equinácea",
+    categoria: "Erva Medicinal",
+    beneficios: ["Fortalece imunidade", "Previne gripes", "Anti-inflamatório", "Antiviral"],
+    tabelaNutricional: {
+      calorias: "1 kcal/100ml (chá)",
+      proteinas: "0g",
+      carboidratos: "0.2g",
+      fibras: "0g",
+      gorduras: "0g",
+      vitaminas: ["Vitamina C (traços)"],
+      minerais: ["Ferro", "Potássio"]
+    },
+    propriedadesMedicinais: ["Estimula células imunes", "Reduz duração de resfriados", "Antioxidante"]
+  },
+  {
+    id: "em7",
+    nome: "Espinheira-santa",
+    categoria: "Erva Medicinal",
+    beneficios: ["Protege estômago", "Alivia gastrite", "Cicatrizante", "Anti-inflamatório"],
+    tabelaNutricional: {
+      calorias: "2 kcal/100ml (chá)",
+      proteinas: "0.1g",
+      carboidratos: "0.4g",
+      fibras: "0g",
+      gorduras: "0g",
+      vitaminas: ["Vitamina C (traços)"],
+      minerais: ["Cálcio", "Magnésio"]
+    },
+    propriedadesMedicinais: ["Protege mucosa gástrica", "Reduz acidez", "Cicatriza úlceras"]
+  },
+  {
+    id: "em8",
+    nome: "Hibisco",
+    categoria: "Erva Medicinal",
+    beneficios: ["Reduz pressão arterial", "Antioxidante", "Auxilia emagrecimento", "Diurético"],
+    tabelaNutricional: {
+      calorias: "5 kcal/100ml (chá)",
+      proteinas: "0.1g",
+      carboidratos: "1.2g",
+      fibras: "0g",
+      gorduras: "0g",
+      vitaminas: ["Vitamina C", "Vitamina A"],
+      minerais: ["Ferro", "Cálcio", "Magnésio"]
+    },
+    propriedadesMedicinais: ["Antocianinas reduzem pressão", "Acelera metabolismo", "Combate radicais livres"]
+  },
+
+  // FRUTAS
+  {
+    id: "f1",
+    nome: "Banana",
+    categoria: "Fruta",
+    beneficios: ["Rica em potássio", "Energia rápida", "Melhora humor", "Regula intestino"],
+    tabelaNutricional: {
+      calorias: "89 kcal/100g",
+      proteinas: "1.1g",
+      carboidratos: "22.8g",
+      fibras: "2.6g",
+      gorduras: "0.3g",
+      vitaminas: ["Vitamina B6", "Vitamina C", "Folato"],
+      minerais: ["Potássio", "Magnésio", "Manganês"]
+    }
+  },
+  {
+    id: "f2",
+    nome: "Maçã",
+    categoria: "Fruta",
+    beneficios: ["Rica em fibras", "Antioxidante", "Controla colesterol", "Melhora digestão"],
+    tabelaNutricional: {
+      calorias: "52 kcal/100g",
+      proteinas: "0.3g",
+      carboidratos: "13.8g",
+      fibras: "2.4g",
+      gorduras: "0.2g",
+      vitaminas: ["Vitamina C", "Vitamina K", "Vitamina A"],
+      minerais: ["Potássio", "Cálcio", "Fósforo"]
+    }
+  },
+  {
+    id: "f3",
+    nome: "Laranja",
+    categoria: "Fruta",
+    beneficios: ["Rica em vitamina C", "Fortalece imunidade", "Antioxidante", "Melhora pele"],
+    tabelaNutricional: {
+      calorias: "47 kcal/100g",
+      proteinas: "0.9g",
+      carboidratos: "11.8g",
+      fibras: "2.4g",
+      gorduras: "0.1g",
+      vitaminas: ["Vitamina C", "Vitamina A", "Folato", "Tiamina"],
+      minerais: ["Potássio", "Cálcio", "Magnésio"]
+    }
+  },
+  {
+    id: "f4",
+    nome: "Morango",
+    categoria: "Fruta",
+    beneficios: ["Antioxidante potente", "Melhora saúde cardíaca", "Controla açúcar", "Anti-inflamatório"],
+    tabelaNutricional: {
+      calorias: "32 kcal/100g",
+      proteinas: "0.7g",
+      carboidratos: "7.7g",
+      fibras: "2g",
+      gorduras: "0.3g",
+      vitaminas: ["Vitamina C", "Folato", "Vitamina K"],
+      minerais: ["Potássio", "Manganês", "Magnésio"]
+    }
+  },
+  {
+    id: "f5",
+    nome: "Abacate",
+    categoria: "Fruta",
+    beneficios: ["Gorduras saudáveis", "Melhora absorção de nutrientes", "Saúde cardíaca", "Saciedade"],
+    tabelaNutricional: {
+      calorias: "160 kcal/100g",
+      proteinas: "2g",
+      carboidratos: "8.5g",
+      fibras: "6.7g",
+      gorduras: "14.7g",
+      vitaminas: ["Vitamina K", "Folato", "Vitamina C", "Vitamina E"],
+      minerais: ["Potássio", "Magnésio", "Cobre"]
+    }
+  },
+  {
+    id: "f6",
+    nome: "Mamão",
+    categoria: "Fruta",
+    beneficios: ["Melhora digestão", "Rico em vitamina C", "Antioxidante", "Regula intestino"],
+    tabelaNutricional: {
+      calorias: "43 kcal/100g",
+      proteinas: "0.5g",
+      carboidratos: "10.8g",
+      fibras: "1.7g",
+      gorduras: "0.3g",
+      vitaminas: ["Vitamina C", "Vitamina A", "Folato", "Vitamina E"],
+      minerais: ["Potássio", "Magnésio", "Cálcio"]
+    }
+  },
+  {
+    id: "f7",
+    nome: "Melancia",
+    categoria: "Fruta",
+    beneficios: ["Hidratante", "Baixa caloria", "Rica em licopeno", "Melhora circulação"],
+    tabelaNutricional: {
+      calorias: "30 kcal/100g",
+      proteinas: "0.6g",
+      carboidratos: "7.6g",
+      fibras: "0.4g",
+      gorduras: "0.2g",
+      vitaminas: ["Vitamina C", "Vitamina A", "Vitamina B6"],
+      minerais: ["Potássio", "Magnésio"]
+    }
+  },
+  {
+    id: "f8",
+    nome: "Uva",
+    categoria: "Fruta",
+    beneficios: ["Antioxidante", "Melhora saúde cardíaca", "Anti-inflamatório", "Protege cérebro"],
+    tabelaNutricional: {
+      calorias: "69 kcal/100g",
+      proteinas: "0.7g",
+      carboidratos: "18.1g",
+      fibras: "0.9g",
+      gorduras: "0.2g",
+      vitaminas: ["Vitamina C", "Vitamina K", "Vitamina B6"],
+      minerais: ["Potássio", "Cobre", "Manganês"]
+    }
+  },
+  {
+    id: "f9",
+    nome: "Kiwi",
+    categoria: "Fruta",
+    beneficios: ["Rico em vitamina C", "Melhora digestão", "Fortalece imunidade", "Antioxidante"],
+    tabelaNutricional: {
+      calorias: "61 kcal/100g",
+      proteinas: "1.1g",
+      carboidratos: "14.7g",
+      fibras: "3g",
+      gorduras: "0.5g",
+      vitaminas: ["Vitamina C", "Vitamina K", "Vitamina E", "Folato"],
+      minerais: ["Potássio", "Cobre", "Magnésio"]
+    }
+  },
+  {
+    id: "f10",
+    nome: "Manga",
+    categoria: "Fruta",
+    beneficios: ["Rica em vitamina A", "Antioxidante", "Melhora imunidade", "Saúde da pele"],
+    tabelaNutricional: {
+      calorias: "60 kcal/100g",
+      proteinas: "0.8g",
+      carboidratos: "15g",
+      fibras: "1.6g",
+      gorduras: "0.4g",
+      vitaminas: ["Vitamina A", "Vitamina C", "Vitamina E", "Folato"],
+      minerais: ["Potássio", "Magnésio", "Cobre"]
+    }
+  },
+
+  // LEGUMES
+  {
+    id: "l1",
+    nome: "Brócolis",
+    categoria: "Legume",
+    beneficios: ["Anticancerígeno", "Rico em vitamina K", "Fortalece ossos", "Antioxidante"],
+    tabelaNutricional: {
+      calorias: "34 kcal/100g",
+      proteinas: "2.8g",
+      carboidratos: "6.6g",
+      fibras: "2.6g",
+      gorduras: "0.4g",
+      vitaminas: ["Vitamina K", "Vitamina C", "Folato", "Vitamina A"],
+      minerais: ["Potássio", "Cálcio", "Ferro", "Magnésio"]
+    }
+  },
+  {
+    id: "l2",
+    nome: "Cenoura",
+    categoria: "Legume",
+    beneficios: ["Rica em vitamina A", "Melhora visão", "Antioxidante", "Saúde da pele"],
+    tabelaNutricional: {
+      calorias: "41 kcal/100g",
+      proteinas: "0.9g",
+      carboidratos: "9.6g",
+      fibras: "2.8g",
+      gorduras: "0.2g",
+      vitaminas: ["Vitamina A", "Vitamina K", "Vitamina C", "Vitamina B6"],
+      minerais: ["Potássio", "Manganês", "Fósforo"]
+    }
+  },
+  {
+    id: "l3",
+    nome: "Espinafre",
+    categoria: "Legume",
+    beneficios: ["Rico em ferro", "Fortalece ossos", "Antioxidante", "Melhora visão"],
+    tabelaNutricional: {
+      calorias: "23 kcal/100g",
+      proteinas: "2.9g",
+      carboidratos: "3.6g",
+      fibras: "2.2g",
+      gorduras: "0.4g",
+      vitaminas: ["Vitamina K", "Vitamina A", "Folato", "Vitamina C"],
+      minerais: ["Ferro", "Cálcio", "Magnésio", "Potássio"]
+    }
+  },
+  {
+    id: "l4",
+    nome: "Tomate",
+    categoria: "Legume",
+    beneficios: ["Rico em licopeno", "Antioxidante", "Saúde cardíaca", "Protege pele"],
+    tabelaNutricional: {
+      calorias: "18 kcal/100g",
+      proteinas: "0.9g",
+      carboidratos: "3.9g",
+      fibras: "1.2g",
+      gorduras: "0.2g",
+      vitaminas: ["Vitamina C", "Vitamina K", "Folato", "Vitamina A"],
+      minerais: ["Potássio", "Manganês", "Fósforo"]
+    }
+  },
+  {
+    id: "l5",
+    nome: "Batata-doce",
+    categoria: "Legume",
+    beneficios: ["Energia sustentada", "Rica em vitamina A", "Regula açúcar", "Rica em fibras"],
+    tabelaNutricional: {
+      calorias: "86 kcal/100g",
+      proteinas: "1.6g",
+      carboidratos: "20.1g",
+      fibras: "3g",
+      gorduras: "0.1g",
+      vitaminas: ["Vitamina A", "Vitamina C", "Vitamina B6", "Folato"],
+      minerais: ["Potássio", "Manganês", "Magnésio"]
+    }
+  },
+  {
+    id: "l6",
+    nome: "Couve",
+    categoria: "Legume",
+    beneficios: ["Desintoxicante", "Rica em cálcio", "Antioxidante", "Anti-inflamatório"],
+    tabelaNutricional: {
+      calorias: "49 kcal/100g",
+      proteinas: "4.3g",
+      carboidratos: "8.8g",
+      fibras: "3.6g",
+      gorduras: "0.9g",
+      vitaminas: ["Vitamina K", "Vitamina A", "Vitamina C", "Folato"],
+      minerais: ["Cálcio", "Potássio", "Magnésio", "Ferro"]
+    }
+  },
+  {
+    id: "l7",
+    nome: "Beterraba",
+    categoria: "Legume",
+    beneficios: ["Melhora performance", "Reduz pressão", "Desintoxicante", "Rica em folato"],
+    tabelaNutricional: {
+      calorias: "43 kcal/100g",
+      proteinas: "1.6g",
+      carboidratos: "9.6g",
+      fibras: "2.8g",
+      gorduras: "0.2g",
+      vitaminas: ["Folato", "Vitamina C", "Vitamina B6"],
+      minerais: ["Potássio", "Manganês", "Ferro", "Magnésio"]
+    }
+  },
+  {
+    id: "l8",
+    nome: "Abobrinha",
+    categoria: "Legume",
+    beneficios: ["Baixa caloria", "Rica em fibras", "Hidratante", "Melhora digestão"],
+    tabelaNutricional: {
+      calorias: "17 kcal/100g",
+      proteinas: "1.2g",
+      carboidratos: "3.1g",
+      fibras: "1g",
+      gorduras: "0.3g",
+      vitaminas: ["Vitamina C", "Vitamina A", "Folato", "Vitamina K"],
+      minerais: ["Potássio", "Manganês", "Magnésio"]
+    }
+  },
+  {
+    id: "l9",
+    nome: "Pimentão",
+    categoria: "Legume",
+    beneficios: ["Rico em vitamina C", "Antioxidante", "Anti-inflamatório", "Melhora imunidade"],
+    tabelaNutricional: {
+      calorias: "31 kcal/100g",
+      proteinas: "1g",
+      carboidratos: "6g",
+      fibras: "2.1g",
+      gorduras: "0.3g",
+      vitaminas: ["Vitamina C", "Vitamina A", "Vitamina B6", "Folato"],
+      minerais: ["Potássio", "Manganês", "Magnésio"]
+    }
+  },
+  {
+    id: "l10",
+    nome: "Berinjela",
+    categoria: "Legume",
+    beneficios: ["Baixa caloria", "Rica em fibras", "Antioxidante", "Saúde cardíaca"],
+    tabelaNutricional: {
+      calorias: "25 kcal/100g",
+      proteinas: "1g",
+      carboidratos: "5.9g",
+      fibras: "3g",
+      gorduras: "0.2g",
+      vitaminas: ["Vitamina K", "Vitamina C", "Vitamina B6", "Folato"],
+      minerais: ["Potássio", "Manganês", "Magnésio"]
+    }
+  }
+];
+
+// ==================== BASE DE DADOS - RECEITAS ====================
+const receitasDB: Receita[] = [
+  // CAFÉ DA MANHÃ
+  {
+    id: "r1",
+    nome: "Smoothie Verde Energizante",
+    tipo: "Vegana",
+    categoria: "Café da Manhã",
+    ingredientes: [
+      "1 banana congelada",
+      "1 xícara de espinafre fresco",
+      "1/2 abacate",
+      "1 colher de sopa de gengibre ralado",
+      "1 xícara de leite vegetal",
+      "1 colher de chá de cúrcuma",
+      "Mel ou tâmaras para adoçar"
+    ],
+    modoPreparo: [
+      "Adicione todos os ingredientes no liquidificador",
+      "Bata até obter consistência cremosa",
+      "Sirva imediatamente",
+      "Decore com sementes de chia se desejar"
+    ],
+    tempoPreparo: "5 minutos",
+    porcoes: 1,
+    beneficios: ["Energia sustentada", "Rico em antioxidantes", "Anti-inflamatório", "Fortalece imunidade"],
+    valorNutricional: {
+      calorias: "320 kcal",
+      proteinas: "8g",
+      carboidratos: "45g",
+      fibras: "12g"
+    }
+  },
+  {
+    id: "r2",
+    nome: "Panquecas de Banana e Aveia",
+    tipo: "Vegetariana",
+    categoria: "Café da Manhã",
+    ingredientes: [
+      "2 bananas maduras",
+      "1 xícara de aveia em flocos",
+      "2 ovos",
+      "1 colher de chá de canela",
+      "1 pitada de sal",
+      "Óleo de coco para untar"
+    ],
+    modoPreparo: [
+      "Amasse as bananas em uma tigela",
+      "Adicione ovos, aveia, canela e sal",
+      "Misture bem até formar uma massa homogênea",
+      "Aqueça uma frigideira com óleo de coco",
+      "Despeje porções da massa e cozinhe 2-3 minutos cada lado",
+      "Sirva com frutas frescas e mel"
+    ],
+    tempoPreparo: "15 minutos",
+    porcoes: 2,
+    beneficios: ["Energia de longa duração", "Rica em fibras", "Controla glicemia", "Saciedade prolongada"],
+    valorNutricional: {
+      calorias: "280 kcal",
+      proteinas: "12g",
+      carboidratos: "42g",
+      fibras: "7g"
+    }
+  },
+  {
+    id: "r3",
+    nome: "Bowl de Açaí Completo",
+    tipo: "Vegana",
+    categoria: "Café da Manhã",
+    ingredientes: [
+      "200g de polpa de açaí",
+      "1 banana",
+      "1/2 xícara de morangos",
+      "Granola",
+      "Coco ralado",
+      "Sementes de chia",
+      "Mel ou agave"
+    ],
+    modoPreparo: [
+      "Bata a polpa de açaí com metade da banana",
+      "Despeje em uma tigela",
+      "Decore com frutas fatiadas, granola, coco e chia",
+      "Regue com mel se desejar"
+    ],
+    tempoPreparo: "10 minutos",
+    porcoes: 1,
+    beneficios: ["Antioxidante potente", "Energia rápida", "Rico em fibras", "Fortalece imunidade"],
+    valorNutricional: {
+      calorias: "380 kcal",
+      proteinas: "6g",
+      carboidratos: "58g",
+      fibras: "10g"
+    }
+  },
+
+  // ALMOÇO
+  {
+    id: "r4",
+    nome: "Salada Completa de Quinoa",
+    tipo: "Vegana",
+    categoria: "Almoço",
+    ingredientes: [
+      "1 xícara de quinoa cozida",
+      "1 xícara de grão-de-bico cozido",
+      "2 xícaras de espinafre fresco",
+      "1 cenoura ralada",
+      "1 beterraba cozida em cubos",
+      "1/4 xícara de nozes",
+      "Azeite, limão, sal e pimenta para temperar"
+    ],
+    modoPreparo: [
+      "Cozinhe a quinoa conforme instruções da embalagem",
+      "Em uma tigela grande, misture quinoa, grão-de-bico e vegetais",
+      "Adicione as nozes picadas",
+      "Tempere com azeite, suco de limão, sal e pimenta",
+      "Misture bem e sirva"
+    ],
+    tempoPreparo: "25 minutos",
+    porcoes: 2,
+    beneficios: ["Proteína completa", "Rica em ferro", "Antioxidante", "Saciedade prolongada"],
+    valorNutricional: {
+      calorias: "420 kcal",
+      proteinas: "18g",
+      carboidratos: "52g",
+      fibras: "14g"
+    }
+  },
+  {
+    id: "r5",
+    nome: "Curry de Legumes com Cúrcuma",
+    tipo: "Vegana",
+    categoria: "Almoço",
+    ingredientes: [
+      "2 batatas-doces em cubos",
+      "1 xícara de brócolis",
+      "1 xícara de couve-flor",
+      "1 lata de leite de coco",
+      "2 colheres de sopa de curry",
+      "1 colher de chá de cúrcuma",
+      "1 colher de sopa de gengibre ralado",
+      "2 dentes de alho",
+      "Sal e pimenta a gosto"
+    ],
+    modoPreparo: [
+      "Refogue alho e gengibre em óleo de coco",
+      "Adicione curry e cúrcuma, refogue por 1 minuto",
+      "Adicione batata-doce e cozinhe por 5 minutos",
+      "Adicione brócolis, couve-flor e leite de coco",
+      "Cozinhe até os legumes ficarem macios (15-20 minutos)",
+      "Tempere com sal e pimenta",
+      "Sirva com arroz integral"
+    ],
+    tempoPreparo: "35 minutos",
+    porcoes: 4,
+    beneficios: ["Anti-inflamatório potente", "Rico em fibras", "Fortalece imunidade", "Antioxidante"],
+    valorNutricional: {
+      calorias: "340 kcal",
+      proteinas: "8g",
+      carboidratos: "38g",
+      fibras: "9g"
+    }
+  },
+  {
+    id: "r6",
+    nome: "Wrap de Falafel com Tahine",
+    tipo: "Vegana",
+    categoria: "Almoço",
+    ingredientes: [
+      "1 xícara de grão-de-bico cozido",
+      "1/4 xícara de salsa fresca",
+      "2 dentes de alho",
+      "1 colher de chá de cominho",
+      "Tortillas integrais",
+      "Alface, tomate, pepino",
+      "Molho tahine (pasta de gergelim + limão + água)"
+    ],
+    modoPreparo: [
+      "Processe grão-de-bico, salsa, alho e cominho até formar uma massa",
+      "Forme bolinhas e asse a 180°C por 20 minutos",
+      "Prepare o molho tahine misturando pasta de gergelim, limão e água",
+      "Monte o wrap com tortilla, falafel, vegetais e molho",
+      "Enrole e sirva"
+    ],
+    tempoPreparo: "30 minutos",
+    porcoes: 2,
+    beneficios: ["Rica em proteínas", "Fibras abundantes", "Energia sustentada", "Saúde digestiva"],
+    valorNutricional: {
+      calorias: "380 kcal",
+      proteinas: "16g",
+      carboidratos: "48g",
+      fibras: "12g"
+    }
+  },
+
+  // JANTAR
+  {
+    id: "r7",
+    nome: "Sopa Detox de Legumes",
+    tipo: "Vegana",
+    categoria: "Jantar",
+    ingredientes: [
+      "2 xícaras de couve picada",
+      "1 abobrinha em cubos",
+      "1 cenoura em cubos",
+      "1 tomate picado",
+      "2 dentes de alho",
+      "1 colher de sopa de gengibre ralado",
+      "1 litro de caldo de legumes",
+      "Suco de 1 limão",
+      "Sal, pimenta e cúrcuma"
+    ],
+    modoPreparo: [
+      "Refogue alho e gengibre em azeite",
+      "Adicione os legumes e refogue por 5 minutos",
+      "Adicione o caldo de legumes e cozinhe por 15 minutos",
+      "Tempere com sal, pimenta e cúrcuma",
+      "Finalize com suco de limão",
+      "Sirva quente"
+    ],
+    tempoPreparo: "25 minutos",
+    porcoes: 3,
+    beneficios: ["Desintoxicante", "Baixa caloria", "Rica em fibras", "Hidratante"],
+    valorNutricional: {
+      calorias: "120 kcal",
+      proteinas: "4g",
+      carboidratos: "22g",
+      fibras: "6g"
+    }
+  },
+  {
+    id: "r8",
+    nome: "Risoto de Cogumelos e Espinafre",
+    tipo: "Vegetariana",
+    categoria: "Jantar",
+    ingredientes: [
+      "1 xícara de arroz arbóreo",
+      "200g de cogumelos variados",
+      "2 xícaras de espinafre",
+      "1 cebola picada",
+      "2 dentes de alho",
+      "1/2 xícara de vinho branco",
+      "4 xícaras de caldo de legumes quente",
+      "Queijo parmesão ralado",
+      "Azeite, sal e pimenta"
+    ],
+    modoPreparo: [
+      "Refogue cebola e alho em azeite",
+      "Adicione o arroz e refogue por 2 minutos",
+      "Adicione o vinho e deixe evaporar",
+      "Adicione o caldo aos poucos, mexendo sempre",
+      "Quando o arroz estiver quase pronto, adicione cogumelos e espinafre",
+      "Finalize com queijo parmesão",
+      "Sirva imediatamente"
+    ],
+    tempoPreparo: "40 minutos",
+    porcoes: 3,
+    beneficios: ["Rico em ferro", "Proteínas vegetais", "Energia sustentada", "Fortalece ossos"],
+    valorNutricional: {
+      calorias: "360 kcal",
+      proteinas: "12g",
+      carboidratos: "54g",
+      fibras: "5g"
+    }
+  },
+  {
+    id: "r9",
+    nome: "Berinjela Recheada Mediterrânea",
+    tipo: "Vegana",
+    categoria: "Jantar",
+    ingredientes: [
+      "2 berinjelas grandes",
+      "1 xícara de quinoa cozida",
+      "1 xícara de tomate picado",
+      "1/2 xícara de azeitonas pretas",
+      "1/4 xícara de manjericão fresco",
+      "2 dentes de alho",
+      "Azeite, sal, pimenta e orégano"
+    ],
+    modoPreparo: [
+      "Corte as berinjelas ao meio e retire a polpa",
+      "Pique a polpa e refogue com alho",
+      "Misture com quinoa, tomate, azeitonas e manjericão",
+      "Tempere com sal, pimenta e orégano",
+      "Recheie as berinjelas",
+      "Asse a 180°C por 30 minutos",
+      "Sirva quente"
+    ],
+    tempoPreparo: "45 minutos",
+    porcoes: 2,
+    beneficios: ["Baixa caloria", "Rica em fibras", "Antioxidante", "Saúde cardíaca"],
+    valorNutricional: {
+      calorias: "280 kcal",
+      proteinas: "10g",
+      carboidratos: "38g",
+      fibras: "11g"
+    }
+  },
+
+  // LANCHES
+  {
+    id: "r10",
+    nome: "Hummus de Grão-de-Bico",
+    tipo: "Vegana",
+    categoria: "Lanche",
+    ingredientes: [
+      "1 xícara de grão-de-bico cozido",
+      "2 colheres de sopa de tahine",
+      "2 dentes de alho",
+      "Suco de 1 limão",
+      "2 colheres de sopa de azeite",
+      "1 colher de chá de cominho",
+      "Sal e páprica"
+    ],
+    modoPreparo: [
+      "Processe todos os ingredientes no liquidificador",
+      "Adicione água aos poucos até obter consistência cremosa",
+      "Tempere com sal a gosto",
+      "Sirva com palitos de cenoura, pepino e pimentão",
+      "Finalize com azeite e páprica por cima"
+    ],
+    tempoPreparo: "10 minutos",
+    porcoes: 4,
+    beneficios: ["Rica em proteínas", "Gorduras saudáveis", "Saciedade", "Energia sustentada"],
+    valorNutricional: {
+      calorias: "180 kcal",
+      proteinas: "7g",
+      carboidratos: "18g",
+      fibras: "5g"
+    }
+  },
+  {
+    id: "r11",
+    nome: "Barrinhas de Aveia e Frutas",
+    tipo: "Vegana",
+    categoria: "Lanche",
+    ingredientes: [
+      "2 xícaras de aveia em flocos",
+      "1 xícara de tâmaras sem caroço",
+      "1/2 xícara de amêndoas",
+      "1/4 xícara de cranberries secas",
+      "2 colheres de sopa de manteiga de amendoim",
+      "1 colher de chá de canela"
+    ],
+    modoPreparo: [
+      "Processe as tâmaras até formar uma pasta",
+      "Misture com aveia, amêndoas picadas, cranberries e canela",
+      "Adicione manteiga de amendoim e misture bem",
+      "Pressione a mistura em uma forma retangular",
+      "Leve à geladeira por 2 horas",
+      "Corte em barrinhas e armazene"
+    ],
+    tempoPreparo: "15 minutos + 2h geladeira",
+    porcoes: 8,
+    beneficios: ["Energia rápida", "Rica em fibras", "Sem açúcar refinado", "Saciedade"],
+    valorNutricional: {
+      calorias: "220 kcal",
+      proteinas: "6g",
+      carboidratos: "32g",
+      fibras: "5g"
+    }
+  },
+
+  // SOBREMESAS
+  {
+    id: "r12",
+    nome: "Mousse de Abacate com Cacau",
+    tipo: "Vegana",
+    categoria: "Sobremesa",
+    ingredientes: [
+      "2 abacates maduros",
+      "1/4 xícara de cacau em pó",
+      "1/4 xícara de mel ou agave",
+      "1 colher de chá de baunilha",
+      "Pitada de sal",
+      "Frutas vermelhas para decorar"
+    ],
+    modoPreparo: [
+      "Bata todos os ingredientes no liquidificador até ficar cremoso",
+      "Ajuste o dulçor se necessário",
+      "Distribua em taças",
+      "Leve à geladeira por 1 hora",
+      "Decore com frutas vermelhas antes de servir"
+    ],
+    tempoPreparo: "10 minutos + 1h geladeira",
+    porcoes: 4,
+    beneficios: ["Gorduras saudáveis", "Antioxidante", "Sem açúcar refinado", "Saciedade"],
+    valorNutricional: {
+      calorias: "240 kcal",
+      proteinas: "3g",
+      carboidratos: "28g",
+      fibras: "8g"
+    }
+  }
+];
+
+// ==================== COMPONENTE PRINCIPAL ====================
+export default function Home() {
+  const [activeTab, setActiveTab] = useState<"catalogo" | "receitas" | "dashboard">("catalogo");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategoria, setSelectedCategoria] = useState<string>("Todos");
+  const [selectedProduto, setSelectedProduto] = useState<Produto | null>(null);
+  const [selectedReceita, setSelectedReceita] = useState<Receita | null>(null);
   const [isPremium, setIsPremium] = useState(false);
   
-  // Estados de nutrição
-  const [protein, setProtein] = useState('');
-  const [fiber, setFiber] = useState('');
-  const [water, setWater] = useState('');
-  const [history, setHistory] = useState<NutritionEntry[]>([]);
-  const [goals, setGoals] = useState<Goals>({ protein: 60, fiber: 30, water: 2000 });
-  
+  // Estados do Dashboard Premium
+  const [registros, setRegistros] = useState<RegistroNutricional[]>([]);
+  const [metas, setMetas] = useState<Meta>({
+    proteinas: 60,
+    fibras: 30,
+    agua: 2000,
+    calorias: 2000
+  });
+  const [registroAtual, setRegistroAtual] = useState({
+    proteinas: 0,
+    fibras: 0,
+    agua: 0,
+    calorias: 0
+  });
+
   // Carregar dados do localStorage
   useEffect(() => {
-    const savedHistory = localStorage.getItem('fitoSaudeHistory');
-    const savedGoals = localStorage.getItem('fitoSaudeGoals');
-    const savedPremium = localStorage.getItem('fitoSaudePremium');
+    const savedPremium = localStorage.getItem("fitosaude_premium");
+    const savedRegistros = localStorage.getItem("fitosaude_registros");
+    const savedMetas = localStorage.getItem("fitosaude_metas");
     
-    if (savedHistory) setHistory(JSON.parse(savedHistory));
-    if (savedGoals) setGoals(JSON.parse(savedGoals));
     if (savedPremium) setIsPremium(JSON.parse(savedPremium));
+    if (savedRegistros) setRegistros(JSON.parse(savedRegistros));
+    if (savedMetas) setMetas(JSON.parse(savedMetas));
   }, []);
-  
-  // Salvar histórico
-  const saveEntry = () => {
-    const newEntry: NutritionEntry = {
-      date: new Date().toISOString().split('T')[0],
-      protein: parseFloat(protein) || 0,
-      fiber: parseFloat(fiber) || 0,
-      water: parseFloat(water) || 0
+
+  // Filtrar produtos
+  const produtosFiltrados = produtosDB.filter(produto => {
+    const matchesSearch = produto.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         produto.beneficios.some(b => b.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesCategoria = selectedCategoria === "Todos" || produto.categoria === selectedCategoria;
+    return matchesSearch && matchesCategoria;
+  });
+
+  // Filtrar receitas
+  const receitasFiltradas = receitasDB.filter(receita => {
+    const matchesSearch = receita.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         receita.ingredientes.some(i => i.toLowerCase().includes(searchTerm.toLowerCase()));
+    return matchesSearch;
+  });
+
+  const categorias = ["Todos", "Condimento", "Erva", "Erva Medicinal", "Fruta", "Legume"];
+
+  // Adicionar registro
+  const adicionarRegistro = () => {
+    const hoje = new Date().toISOString().split('T')[0];
+    const novoRegistro: RegistroNutricional = {
+      data: hoje,
+      ...registroAtual
     };
     
-    const updatedHistory = [newEntry, ...history];
-    setHistory(updatedHistory);
-    localStorage.setItem('fitoSaudeHistory', JSON.stringify(updatedHistory));
+    const novosRegistros = [...registros.filter(r => r.data !== hoje), novoRegistro];
+    setRegistros(novosRegistros);
+    localStorage.setItem("fitosaude_registros", JSON.stringify(novosRegistros));
     
-    setProtein('');
-    setFiber('');
-    setWater('');
+    setRegistroAtual({ proteinas: 0, fibras: 0, agua: 0, calorias: 0 });
   };
-  
-  // Atualizar metas
-  const updateGoals = (newGoals: Goals) => {
-    setGoals(newGoals);
-    localStorage.setItem('fitoSaudeGoals', JSON.stringify(newGoals));
+
+  // Calcular progresso
+  const calcularProgresso = (valor: number, meta: number) => {
+    return Math.min((valor / meta) * 100, 100);
   };
-  
-  // Dados de hoje
-  const todayEntry = history.find(entry => entry.date === new Date().toISOString().split('T')[0]) || {
-    protein: 0,
-    fiber: 0,
-    water: 0
+
+  // Registro de hoje
+  const registroHoje = registros.find(r => r.data === new Date().toISOString().split('T')[0]) || {
+    proteinas: 0,
+    fibras: 0,
+    agua: 0,
+    calorias: 0
   };
-  
-  // Catálogo completo com tabelas nutricionais
-  const catalog: CatalogItem[] = [
-    // CONDIMENTOS (30 itens)
-    { name: 'Açafrão', benefits: 'Anti-inflamatório potente, antioxidante, melhora digestão e função cerebral', category: 'Condimentos', nutrition: { calories: '354 kcal/100g', protein: '7.8g', carbs: '65g', fiber: '21g', vitamins: 'Vitamina C, B6, Ferro, Manganês' } },
-    { name: 'Alho', benefits: 'Fortalece imunidade, reduz pressão arterial, antibacteriano natural', category: 'Condimentos', nutrition: { calories: '149 kcal/100g', protein: '6.4g', carbs: '33g', fiber: '2.1g', vitamins: 'Vitamina C, B6, Manganês, Selênio' } },
-    { name: 'Canela', benefits: 'Controla glicemia, anti-inflamatório, antioxidante poderoso', category: 'Condimentos', nutrition: { calories: '247 kcal/100g', protein: '4g', carbs: '81g', fiber: '53g', vitamins: 'Cálcio, Ferro, Manganês' } },
-    { name: 'Cominho', benefits: 'Melhora digestão, rico em ferro, auxilia perda de peso', category: 'Condimentos', nutrition: { calories: '375 kcal/100g', protein: '17.8g', carbs: '44g', fiber: '10.5g', vitamins: 'Ferro, Manganês, Cálcio, Magnésio' } },
-    { name: 'Coentro', benefits: 'Desintoxicante natural, melhora digestão, anti-inflamatório', category: 'Condimentos', nutrition: { calories: '23 kcal/100g', protein: '2.1g', carbs: '3.7g', fiber: '2.8g', vitamins: 'Vitamina A, C, K, Potássio' } },
-    { name: 'Cravo', benefits: 'Analgésico natural, antibacteriano, melhora saúde bucal', category: 'Condimentos', nutrition: { calories: '274 kcal/100g', protein: '6g', carbs: '65g', fiber: '34g', vitamins: 'Vitamina K, C, Manganês' } },
-    { name: 'Gengibre', benefits: 'Anti-náusea, anti-inflamatório, melhora circulação sanguínea', category: 'Condimentos', nutrition: { calories: '80 kcal/100g', protein: '1.8g', carbs: '18g', fiber: '2g', vitamins: 'Vitamina B6, Magnésio, Potássio' } },
-    { name: 'Mostarda', benefits: 'Acelera metabolismo, rica em minerais, antioxidante', category: 'Condimentos', nutrition: { calories: '508 kcal/100g', protein: '26g', carbs: '28g', fiber: '12g', vitamins: 'Selênio, Magnésio, Fósforo' } },
-    { name: 'Noz-moscada', benefits: 'Melhora sono, anti-inflamatório, auxilia digestão', category: 'Condimentos', nutrition: { calories: '525 kcal/100g', protein: '5.8g', carbs: '49g', fiber: '21g', vitamins: 'Cobre, Manganês, Magnésio' } },
-    { name: 'Páprica', benefits: 'Rica em vitamina A, antioxidante, melhora circulação', category: 'Condimentos', nutrition: { calories: '282 kcal/100g', protein: '14g', carbs: '54g', fiber: '34g', vitamins: 'Vitamina A, E, B6, Ferro' } },
-    { name: 'Pimenta-do-reino', benefits: 'Melhora absorção de nutrientes, antioxidante, digestivo', category: 'Condimentos', nutrition: { calories: '251 kcal/100g', protein: '10g', carbs: '64g', fiber: '25g', vitamins: 'Vitamina K, Ferro, Manganês' } },
-    { name: 'Pimenta Caiena', benefits: 'Acelera metabolismo, analgésico, melhora circulação', category: 'Condimentos', nutrition: { calories: '318 kcal/100g', protein: '12g', carbs: '57g', fiber: '27g', vitamins: 'Vitamina A, C, B6, Potássio' } },
-    { name: 'Cardamomo', benefits: 'Digestivo, antioxidante, melhora respiração', category: 'Condimentos', nutrition: { calories: '311 kcal/100g', protein: '11g', carbs: '68g', fiber: '28g', vitamins: 'Ferro, Manganês, Magnésio' } },
-    { name: 'Curry em Pó', benefits: 'Anti-inflamatório, antioxidante, melhora digestão', category: 'Condimentos', nutrition: { calories: '325 kcal/100g', protein: '14g', carbs: '55g', fiber: '53g', vitamins: 'Ferro, Vitamina E, K' } },
-    { name: 'Endro', benefits: 'Digestivo, calmante, rico em antioxidantes', category: 'Condimentos', nutrition: { calories: '43 kcal/100g', protein: '3.5g', carbs: '7g', fiber: '2.1g', vitamins: 'Vitamina A, C, Cálcio' } },
-    { name: 'Erva-doce (semente)', benefits: 'Digestivo, expectorante, calmante natural', category: 'Condimentos', nutrition: { calories: '345 kcal/100g', protein: '15.8g', carbs: '52g', fiber: '39.8g', vitamins: 'Cálcio, Ferro, Magnésio' } },
-    { name: 'Feno-grego', benefits: 'Controla glicemia, aumenta lactação, anti-inflamatório', category: 'Condimentos', nutrition: { calories: '323 kcal/100g', protein: '23g', carbs: '58g', fiber: '25g', vitamins: 'Ferro, Magnésio, Manganês' } },
-    { name: 'Louro', benefits: 'Digestivo, anti-inflamatório, melhora respiração', category: 'Condimentos', nutrition: { calories: '313 kcal/100g', protein: '7.6g', carbs: '75g', fiber: '26g', vitamins: 'Vitamina A, C, Cálcio' } },
-    { name: 'Pimenta Jamaica', benefits: 'Antioxidante, digestivo, analgésico natural', category: 'Condimentos', nutrition: { calories: '263 kcal/100g', protein: '6g', carbs: '72g', fiber: '21g', vitamins: 'Vitamina C, Ferro, Cálcio' } },
-    { name: 'Raiz-forte', benefits: 'Antibacteriano, expectorante, estimula digestão', category: 'Condimentos', nutrition: { calories: '48 kcal/100g', protein: '1.2g', carbs: '11g', fiber: '3.3g', vitamins: 'Vitamina C, Potássio, Cálcio' } },
-    { name: 'Sal Rosa do Himalaia', benefits: 'Rico em minerais, equilibra pH, hidratação celular', category: 'Condimentos', nutrition: { calories: '0 kcal/100g', protein: '0g', carbs: '0g', fiber: '0g', vitamins: '84 minerais traço' } },
-    { name: 'Semente de Mostarda', benefits: 'Anti-inflamatório, rica em ômega-3, antioxidante', category: 'Condimentos', nutrition: { calories: '508 kcal/100g', protein: '26g', carbs: '28g', fiber: '12g', vitamins: 'Selênio, Magnésio, Fósforo' } },
-    { name: 'Sumac', benefits: 'Antioxidante potente, anti-inflamatório, digestivo', category: 'Condimentos', nutrition: { calories: '267 kcal/100g', protein: '5g', carbs: '63g', fiber: '14g', vitamins: 'Vitamina C, Ferro' } },
-    { name: 'Urucum', benefits: 'Antioxidante, protetor solar natural, anti-inflamatório', category: 'Condimentos', nutrition: { calories: '89 kcal/100g', protein: '4g', carbs: '15g', fiber: '3g', vitamins: 'Vitamina A, E, Carotenoides' } },
-    { name: 'Vanilha', benefits: 'Antioxidante, calmante, melhora humor', category: 'Condimentos', nutrition: { calories: '288 kcal/100g', protein: '0.1g', carbs: '12.6g', fiber: '0g', vitamins: 'Magnésio, Potássio, Cálcio' } },
-    { name: 'Wasabi', benefits: 'Antibacteriano, anti-inflamatório, melhora circulação', category: 'Condimentos', nutrition: { calories: '109 kcal/100g', protein: '4.8g', carbs: '24g', fiber: '7.8g', vitamins: 'Vitamina C, Potássio, Cálcio' } },
-    { name: 'Zimbro', benefits: 'Diurético, digestivo, antioxidante', category: 'Condimentos', nutrition: { calories: '323 kcal/100g', protein: '3.9g', carbs: '73g', fiber: '16g', vitamins: 'Vitamina C, Cobre' } },
-    { name: 'Anis Estrelado', benefits: 'Digestivo, expectorante, antiviral', category: 'Condimentos', nutrition: { calories: '337 kcal/100g', protein: '18g', carbs: '50g', fiber: '15g', vitamins: 'Ferro, Cálcio, Magnésio' } },
-    { name: 'Pimenta Rosa', benefits: 'Antioxidante, anti-inflamatório, digestivo', category: 'Condimentos', nutrition: { calories: '360 kcal/100g', protein: '4g', carbs: '78g', fiber: '12g', vitamins: 'Vitamina C, Ferro' } },
-    { name: 'Açafrão-da-terra', benefits: 'Anti-inflamatório, antioxidante, hepatoprotetor', category: 'Condimentos', nutrition: { calories: '312 kcal/100g', protein: '9.7g', carbs: '67g', fiber: '22.7g', vitamins: 'Ferro, Manganês, Vitamina B6' } },
-    
-    // ERVAS CULINÁRIAS E MEDICINAIS (40 itens)
-    { name: 'Alecrim', benefits: 'Melhora memória e concentração, antioxidante, anti-inflamatório', category: 'Ervas', nutrition: { calories: '131 kcal/100g', protein: '3.3g', carbs: '20g', fiber: '14g', vitamins: 'Vitamina A, C, Cálcio, Ferro' } },
-    { name: 'Alfavaca', benefits: 'Calmante natural, digestivo, antibacteriano', category: 'Ervas', nutrition: { calories: '23 kcal/100g', protein: '3.2g', carbs: '2.7g', fiber: '1.6g', vitamins: 'Vitamina K, A, C, Manganês' } },
-    { name: 'Boldo', benefits: 'Protetor hepático, digestivo, desintoxicante', category: 'Ervas', nutrition: { calories: '45 kcal/100g', protein: '2.5g', carbs: '8g', fiber: '3g', vitamins: 'Vitamina C, Ferro' } },
-    { name: 'Camomila', benefits: 'Calmante, anti-inflamatório, melhora qualidade do sono', category: 'Ervas', nutrition: { calories: '1 kcal/100ml', protein: '0g', carbs: '0.2g', fiber: '0g', vitamins: 'Flavonoides, Apigenina' } },
-    { name: 'Capim-limão', benefits: 'Calmante, digestivo, antioxidante, repelente natural', category: 'Ervas', nutrition: { calories: '99 kcal/100g', protein: '1.8g', carbs: '25g', fiber: '0g', vitamins: 'Vitamina A, C, Ácido fólico' } },
-    { name: 'Erva-cidreira', benefits: 'Calmante, melhora digestão, antiviral', category: 'Ervas', nutrition: { calories: '44 kcal/100g', protein: '3.7g', carbs: '8g', fiber: '0g', vitamins: 'Vitamina C, Cálcio, Magnésio' } },
-    { name: 'Erva-doce', benefits: 'Digestivo, expectorante, calmante, reduz cólicas', category: 'Ervas', nutrition: { calories: '31 kcal/100g', protein: '1.2g', carbs: '7g', fiber: '3.1g', vitamins: 'Vitamina C, Potássio, Cálcio' } },
-    { name: 'Hortelã', benefits: 'Digestivo, refrescante, alivia dores de cabeça e náuseas', category: 'Ervas', nutrition: { calories: '70 kcal/100g', protein: '3.8g', carbs: '14.9g', fiber: '8g', vitamins: 'Vitamina A, C, Ferro, Manganês' } },
-    { name: 'Manjericão', benefits: 'Anti-inflamatório, antibacteriano, antioxidante potente', category: 'Ervas', nutrition: { calories: '23 kcal/100g', protein: '3.2g', carbs: '2.7g', fiber: '1.6g', vitamins: 'Vitamina K, A, C, Manganês' } },
-    { name: 'Orégano', benefits: 'Antibacteriano potente, antioxidante, anti-inflamatório', category: 'Ervas', nutrition: { calories: '265 kcal/100g', protein: '9g', carbs: '69g', fiber: '42.5g', vitamins: 'Vitamina K, Ferro, Cálcio' } },
-    { name: 'Sálvia', benefits: 'Melhora memória, anti-inflamatório, antioxidante', category: 'Ervas', nutrition: { calories: '315 kcal/100g', protein: '10.6g', carbs: '60.7g', fiber: '40.3g', vitamins: 'Vitamina K, A, C, Cálcio' } },
-    { name: 'Tomilho', benefits: 'Antibacteriano, expectorante, antioxidante', category: 'Ervas', nutrition: { calories: '101 kcal/100g', protein: '5.6g', carbs: '24g', fiber: '14g', vitamins: 'Vitamina C, A, Ferro, Manganês' } },
-    { name: 'Alho-poró', benefits: 'Diurético, rico em fibras, antioxidante', category: 'Ervas', nutrition: { calories: '61 kcal/100g', protein: '1.5g', carbs: '14g', fiber: '1.8g', vitamins: 'Vitamina K, A, C, Manganês' } },
-    { name: 'Artemísia', benefits: 'Digestivo, antiparasitário, regula ciclo menstrual', category: 'Ervas', nutrition: { calories: '32 kcal/100g', protein: '3.4g', carbs: '5.8g', fiber: '2.3g', vitamins: 'Vitamina A, C, Ferro' } },
-    { name: 'Calêndula', benefits: 'Cicatrizante, anti-inflamatório, antioxidante', category: 'Ervas', nutrition: { calories: '52 kcal/100g', protein: '2.8g', carbs: '10g', fiber: '3g', vitamins: 'Vitamina A, C, Flavonoides' } },
-    { name: 'Cavalinha', benefits: 'Diurético, remineralizante, fortalece cabelos e unhas', category: 'Ervas', nutrition: { calories: '29 kcal/100g', protein: '0g', carbs: '7g', fiber: '0g', vitamins: 'Silício, Potássio, Magnésio' } },
-    { name: 'Cebolinha', benefits: 'Antibacteriana, rica em antioxidantes, melhora digestão', category: 'Ervas', nutrition: { calories: '30 kcal/100g', protein: '1.8g', carbs: '7g', fiber: '2.5g', vitamins: 'Vitamina K, A, C, Ácido fólico' } },
-    { name: 'Chapéu-de-couro', benefits: 'Diurético, depurativo, anti-inflamatório', category: 'Ervas', nutrition: { calories: '35 kcal/100g', protein: '2g', carbs: '7g', fiber: '2g', vitamins: 'Flavonoides, Taninos' } },
-    { name: 'Dente-de-leão', benefits: 'Depurativo, diurético, protetor hepático', category: 'Ervas', nutrition: { calories: '45 kcal/100g', protein: '2.7g', carbs: '9.2g', fiber: '3.5g', vitamins: 'Vitamina A, C, K, Cálcio' } },
-    { name: 'Equinácea', benefits: 'Fortalece imunidade, antiviral, anti-inflamatório', category: 'Ervas', nutrition: { calories: '38 kcal/100g', protein: '1.5g', carbs: '8g', fiber: '2g', vitamins: 'Vitamina C, Ferro' } },
-    { name: 'Espinheira-santa', benefits: 'Protetor gástrico, cicatrizante, anti-inflamatório', category: 'Ervas', nutrition: { calories: '42 kcal/100g', protein: '2.2g', carbs: '8.5g', fiber: '3g', vitamins: 'Taninos, Flavonoides' } },
-    { name: 'Estévia', benefits: 'Adoçante natural, controla glicemia, zero calorias', category: 'Ervas', nutrition: { calories: '0 kcal/100g', protein: '0g', carbs: '0g', fiber: '0g', vitamins: 'Glicosídeos de esteviol' } },
-    { name: 'Funcho', benefits: 'Digestivo, expectorante, reduz gases', category: 'Ervas', nutrition: { calories: '31 kcal/100g', protein: '1.2g', carbs: '7g', fiber: '3.1g', vitamins: 'Vitamina C, Potássio, Cálcio' } },
-    { name: 'Ginkgo Biloba', benefits: 'Melhora circulação cerebral, antioxidante, melhora memória', category: 'Ervas', nutrition: { calories: '45 kcal/100g', protein: '2g', carbs: '9g', fiber: '2g', vitamins: 'Flavonoides, Terpenoides' } },
-    { name: 'Guaco', benefits: 'Expectorante, broncodilatador, anti-inflamatório', category: 'Ervas', nutrition: { calories: '38 kcal/100g', protein: '1.8g', carbs: '7.5g', fiber: '2.5g', vitamins: 'Cumarina, Vitamina C' } },
-    { name: 'Hibisco', benefits: 'Diurético, antioxidante, controla pressão arterial', category: 'Ervas', nutrition: { calories: '37 kcal/100g', protein: '0.4g', carbs: '7.4g', fiber: '0g', vitamins: 'Vitamina C, Antocianinas' } },
-    { name: 'Lavanda', benefits: 'Calmante, ansiolítico, melhora qualidade do sono', category: 'Ervas', nutrition: { calories: '49 kcal/100g', protein: '1.4g', carbs: '11g', fiber: '0g', vitamins: 'Óleos essenciais, Linalol' } },
-    { name: 'Melissa', benefits: 'Calmante, antiviral, melhora humor', category: 'Ervas', nutrition: { calories: '44 kcal/100g', protein: '3.7g', carbs: '8g', fiber: '0g', vitamins: 'Vitamina C, Ácido rosmarínico' } },
-    { name: 'Mil-folhas', benefits: 'Cicatrizante, anti-inflamatório, digestivo', category: 'Ervas', nutrition: { calories: '46 kcal/100g', protein: '2.5g', carbs: '9g', fiber: '3g', vitamins: 'Vitamina K, C, Flavonoides' } },
-    { name: 'Passiflora', benefits: 'Calmante natural, ansiolítico, melhora sono', category: 'Ervas', nutrition: { calories: '50 kcal/100g', protein: '2.2g', carbs: '10g', fiber: '3g', vitamins: 'Vitamina C, Flavonoides' } },
-    { name: 'Poejo', benefits: 'Digestivo, expectorante, repelente natural', category: 'Ervas', nutrition: { calories: '44 kcal/100g', protein: '3.3g', carbs: '8g', fiber: '2g', vitamins: 'Vitamina A, C, Mentol' } },
-    { name: 'Quebra-pedra', benefits: 'Diurético, dissolve cálculos renais, hepatoprotetor', category: 'Ervas', nutrition: { calories: '35 kcal/100g', protein: '1.8g', carbs: '7g', fiber: '2g', vitamins: 'Vitamina C, Potássio' } },
-    { name: 'Romã (folhas)', benefits: 'Antioxidante, anti-inflamatório, adstringente', category: 'Ervas', nutrition: { calories: '42 kcal/100g', protein: '2g', carbs: '8.5g', fiber: '3g', vitamins: 'Taninos, Vitamina C' } },
-    { name: 'Salsa', benefits: 'Diurético, rica em vitaminas, antioxidante', category: 'Ervas', nutrition: { calories: '36 kcal/100g', protein: '3g', carbs: '6.3g', fiber: '3.3g', vitamins: 'Vitamina K, C, A, Ferro' } },
-    { name: 'Sene', benefits: 'Laxante natural, digestivo, desintoxicante', category: 'Ervas', nutrition: { calories: '38 kcal/100g', protein: '1.5g', carbs: '8g', fiber: '2g', vitamins: 'Senósidos, Flavonoides' } },
-    { name: 'Tanchagem', benefits: 'Expectorante, cicatrizante, anti-inflamatório', category: 'Ervas', nutrition: { calories: '40 kcal/100g', protein: '2.2g', carbs: '8g', fiber: '2.5g', vitamins: 'Vitamina A, C, K' } },
-    { name: 'Urtiga', benefits: 'Remineralizante, diurético, anti-inflamatório', category: 'Ervas', nutrition: { calories: '42 kcal/100g', protein: '2.7g', carbs: '7.1g', fiber: '6.9g', vitamins: 'Vitamina A, C, K, Ferro, Cálcio' } },
-    { name: 'Valeriana', benefits: 'Calmante potente, melhora sono, ansiolítico', category: 'Ervas', nutrition: { calories: '44 kcal/100g', protein: '2g', carbs: '9g', fiber: '2g', vitamins: 'Ácido valerênico, GABA' } },
-    { name: 'Verbena', benefits: 'Calmante, digestivo, anti-inflamatório', category: 'Ervas', nutrition: { calories: '40 kcal/100g', protein: '2.1g', carbs: '8g', fiber: '2.5g', vitamins: 'Vitamina C, Verbenalina' } },
-    { name: 'Zedoária', benefits: 'Digestivo, anti-inflamatório, antioxidante', category: 'Ervas', nutrition: { calories: '48 kcal/100g', protein: '2.5g', carbs: '10g', fiber: '3g', vitamins: 'Curcumina, Vitamina C' } },
-    
-    // FRUTAS (50 itens)
-    { name: 'Abacate', benefits: 'Rico em gorduras boas, vitamina E, melhora colesterol e saúde cardiovascular', category: 'Frutas', nutrition: { calories: '160 kcal/100g', protein: '2g', carbs: '9g', fiber: '7g', vitamins: 'Vitamina K, E, C, B6, Potássio' } },
-    { name: 'Abacaxi', benefits: 'Digestivo, anti-inflamatório, rico em vitamina C e bromelina', category: 'Frutas', nutrition: { calories: '50 kcal/100g', protein: '0.5g', carbs: '13g', fiber: '1.4g', vitamins: 'Vitamina C, Manganês, B6' } },
-    { name: 'Açaí', benefits: 'Antioxidante potente, energético, rico em fibras e antocianinas', category: 'Frutas', nutrition: { calories: '70 kcal/100g', protein: '1.5g', carbs: '6g', fiber: '3g', vitamins: 'Vitamina A, Cálcio, Ferro' } },
-    { name: 'Ameixa', benefits: 'Laxante natural, rica em fibras, antioxidante', category: 'Frutas', nutrition: { calories: '46 kcal/100g', protein: '0.7g', carbs: '11g', fiber: '1.4g', vitamins: 'Vitamina A, C, K, Potássio' } },
-    { name: 'Amora', benefits: 'Antioxidante, anti-inflamatório, melhora memória', category: 'Frutas', nutrition: { calories: '43 kcal/100g', protein: '1.4g', carbs: '10g', fiber: '5.3g', vitamins: 'Vitamina C, K, Manganês' } },
-    { name: 'Banana', benefits: 'Rica em potássio, energética, melhora humor e digestão', category: 'Frutas', nutrition: { calories: '89 kcal/100g', protein: '1.1g', carbs: '23g', fiber: '2.6g', vitamins: 'Vitamina B6, C, Potássio, Magnésio' } },
-    { name: 'Caju', benefits: 'Rico em vitamina C, antioxidante, fortalece imunidade', category: 'Frutas', nutrition: { calories: '43 kcal/100g', protein: '1.7g', carbs: '9g', fiber: '1.7g', vitamins: 'Vitamina C, Cobre, Magnésio' } },
-    { name: 'Caqui', benefits: 'Rico em fibras, vitamina A, antioxidante', category: 'Frutas', nutrition: { calories: '70 kcal/100g', protein: '0.6g', carbs: '18g', fiber: '3.6g', vitamins: 'Vitamina A, C, Manganês' } },
-    { name: 'Carambola', benefits: 'Baixa caloria, rica em vitamina C, antioxidante', category: 'Frutas', nutrition: { calories: '31 kcal/100g', protein: '1g', carbs: '7g', fiber: '2.8g', vitamins: 'Vitamina C, B5, Potássio' } },
-    { name: 'Cereja', benefits: 'Anti-inflamatório, melhora sono, antioxidante potente', category: 'Frutas', nutrition: { calories: '50 kcal/100g', protein: '1g', carbs: '12g', fiber: '1.6g', vitamins: 'Vitamina C, A, Potássio' } },
-    { name: 'Coco', benefits: 'Hidratante, energético, rico em minerais e eletrólitos', category: 'Frutas', nutrition: { calories: '354 kcal/100g', protein: '3.3g', carbs: '15g', fiber: '9g', vitamins: 'Manganês, Cobre, Ferro' } },
-    { name: 'Damasco', benefits: 'Rico em vitamina A, antioxidante, melhora visão', category: 'Frutas', nutrition: { calories: '48 kcal/100g', protein: '1.4g', carbs: '11g', fiber: '2g', vitamins: 'Vitamina A, C, Potássio' } },
-    { name: 'Figo', benefits: 'Rico em fibras, cálcio, digestivo natural', category: 'Frutas', nutrition: { calories: '74 kcal/100g', protein: '0.8g', carbs: '19g', fiber: '2.9g', vitamins: 'Vitamina K, Potássio, Cálcio' } },
-    { name: 'Framboesa', benefits: 'Antioxidante potente, rica em fibras, anti-inflamatório', category: 'Frutas', nutrition: { calories: '52 kcal/100g', protein: '1.2g', carbs: '12g', fiber: '6.5g', vitamins: 'Vitamina C, K, Manganês' } },
-    { name: 'Goiaba', benefits: 'Rica em vitamina C, fibras, antioxidante, melhora imunidade', category: 'Frutas', nutrition: { calories: '68 kcal/100g', protein: '2.6g', carbs: '14g', fiber: '5.4g', vitamins: 'Vitamina C, A, Potássio' } },
-    { name: 'Graviola', benefits: 'Antioxidante, anti-inflamatório, fortalece imunidade', category: 'Frutas', nutrition: { calories: '66 kcal/100g', protein: '1g', carbs: '17g', fiber: '3.3g', vitamins: 'Vitamina C, B1, B2, Potássio' } },
-    { name: 'Jabuticaba', benefits: 'Antioxidante, anti-inflamatório, rica em antocianinas', category: 'Frutas', nutrition: { calories: '58 kcal/100g', protein: '0.6g', carbs: '15g', fiber: '2.3g', vitamins: 'Vitamina C, Ferro, Cálcio' } },
-    { name: 'Jaca', benefits: 'Rica em fibras, energética, antioxidante', category: 'Frutas', nutrition: { calories: '95 kcal/100g', protein: '1.7g', carbs: '23g', fiber: '1.5g', vitamins: 'Vitamina C, A, Potássio, Magnésio' } },
-    { name: 'Jambo', benefits: 'Hidratante, baixa caloria, rico em vitamina C', category: 'Frutas', nutrition: { calories: '25 kcal/100g', protein: '0.6g', carbs: '6g', fiber: '0.9g', vitamins: 'Vitamina C, A, Cálcio' } },
-    { name: 'Kiwi', benefits: 'Rico em vitamina C, digestivo, antioxidante', category: 'Frutas', nutrition: { calories: '61 kcal/100g', protein: '1.1g', carbs: '15g', fiber: '3g', vitamins: 'Vitamina C, K, E, Potássio' } },
-    { name: 'Laranja', benefits: 'Rica em vitamina C, fortalece imunidade, antioxidante', category: 'Frutas', nutrition: { calories: '47 kcal/100g', protein: '0.9g', carbs: '12g', fiber: '2.4g', vitamins: 'Vitamina C, A, Cálcio, Potássio' } },
-    { name: 'Lichia', benefits: 'Antioxidante, rica em vitamina C, melhora circulação', category: 'Frutas', nutrition: { calories: '66 kcal/100g', protein: '0.8g', carbs: '17g', fiber: '1.3g', vitamins: 'Vitamina C, B6, Potássio' } },
-    { name: 'Limão', benefits: 'Alcalinizante, rico em vitamina C, desintoxicante', category: 'Frutas', nutrition: { calories: '29 kcal/100g', protein: '1.1g', carbs: '9g', fiber: '2.8g', vitamins: 'Vitamina C, B6, Potássio' } },
-    { name: 'Maçã', benefits: 'Rica em fibras, antioxidante, melhora digestão e saúde cardíaca', category: 'Frutas', nutrition: { calories: '52 kcal/100g', protein: '0.3g', carbs: '14g', fiber: '2.4g', vitamins: 'Vitamina C, K, Potássio' } },
-    { name: 'Mamão', benefits: 'Digestivo, rico em vitamina A, laxante natural', category: 'Frutas', nutrition: { calories: '43 kcal/100g', protein: '0.5g', carbs: '11g', fiber: '1.7g', vitamins: 'Vitamina C, A, Ácido fólico' } },
-    { name: 'Manga', benefits: 'Rica em vitamina A, antioxidante, digestiva', category: 'Frutas', nutrition: { calories: '60 kcal/100g', protein: '0.8g', carbs: '15g', fiber: '1.6g', vitamins: 'Vitamina A, C, B6, Potássio' } },
-    { name: 'Mangostão', benefits: 'Antioxidante potente, anti-inflamatório, fortalece imunidade', category: 'Frutas', nutrition: { calories: '73 kcal/100g', protein: '0.4g', carbs: '18g', fiber: '1.8g', vitamins: 'Vitamina C, B1, B2, Manganês' } },
-    { name: 'Maracujá', benefits: 'Calmante natural, rico em fibras, antioxidante', category: 'Frutas', nutrition: { calories: '97 kcal/100g', protein: '2.2g', carbs: '23g', fiber: '10.4g', vitamins: 'Vitamina C, A, Ferro, Potássio' } },
-    { name: 'Melancia', benefits: 'Hidratante, diurética, rica em licopeno', category: 'Frutas', nutrition: { calories: '30 kcal/100g', protein: '0.6g', carbs: '8g', fiber: '0.4g', vitamins: 'Vitamina C, A, Licopeno' } },
-    { name: 'Melão', benefits: 'Hidratante, diurético, rico em vitamina C', category: 'Frutas', nutrition: { calories: '34 kcal/100g', protein: '0.8g', carbs: '8g', fiber: '0.9g', vitamins: 'Vitamina C, A, Potássio' } },
-    { name: 'Mirtilo', benefits: 'Antioxidante potente, melhora memória, anti-inflamatório', category: 'Frutas', nutrition: { calories: '57 kcal/100g', protein: '0.7g', carbs: '14g', fiber: '2.4g', vitamins: 'Vitamina C, K, Manganês' } },
-    { name: 'Morango', benefits: 'Antioxidante, rico em vitamina C, anti-inflamatório', category: 'Frutas', nutrition: { calories: '32 kcal/100g', protein: '0.7g', carbs: '8g', fiber: '2g', vitamins: 'Vitamina C, Manganês, Ácido fólico' } },
-    { name: 'Nectarina', benefits: 'Rica em vitamina A, antioxidante, digestiva', category: 'Frutas', nutrition: { calories: '44 kcal/100g', protein: '1.1g', carbs: '11g', fiber: '1.7g', vitamins: 'Vitamina A, C, Potássio' } },
-    { name: 'Nêspera', benefits: 'Rica em vitamina A, antioxidante, digestiva', category: 'Frutas', nutrition: { calories: '47 kcal/100g', protein: '0.4g', carbs: '12g', fiber: '1.7g', vitamins: 'Vitamina A, C, Potássio' } },
-    { name: 'Pera', benefits: 'Rica em fibras, antioxidante, digestiva', category: 'Frutas', nutrition: { calories: '57 kcal/100g', protein: '0.4g', carbs: '15g', fiber: '3.1g', vitamins: 'Vitamina C, K, Potássio' } },
-    { name: 'Pêssego', benefits: 'Rico em fibras, vitamina A, antioxidante', category: 'Frutas', nutrition: { calories: '39 kcal/100g', protein: '0.9g', carbs: '10g', fiber: '1.5g', vitamins: 'Vitamina A, C, Potássio' } },
-    { name: 'Pitanga', benefits: 'Rica em vitamina C, antioxidante, anti-inflamatório', category: 'Frutas', nutrition: { calories: '33 kcal/100g', protein: '0.8g', carbs: '8g', fiber: '3.2g', vitamins: 'Vitamina C, A, Cálcio' } },
-    { name: 'Pitaya', benefits: 'Antioxidante, rica em fibras, fortalece imunidade', category: 'Frutas', nutrition: { calories: '60 kcal/100g', protein: '1.2g', carbs: '13g', fiber: '3g', vitamins: 'Vitamina C, Ferro, Magnésio' } },
-    { name: 'Romã', benefits: 'Antioxidante potente, anti-inflamatório, cardioprotetor', category: 'Frutas', nutrition: { calories: '83 kcal/100g', protein: '1.7g', carbs: '19g', fiber: '4g', vitamins: 'Vitamina C, K, Potássio' } },
-    { name: 'Tangerina', benefits: 'Rica em vitamina C, antioxidante, fortalece imunidade', category: 'Frutas', nutrition: { calories: '53 kcal/100g', protein: '0.8g', carbs: '13g', fiber: '1.8g', vitamins: 'Vitamina C, A, Potássio' } },
-    { name: 'Tamarindo', benefits: 'Laxante natural, antioxidante, rico em minerais', category: 'Frutas', nutrition: { calories: '239 kcal/100g', protein: '2.8g', carbs: '63g', fiber: '5.1g', vitamins: 'Vitamina B1, B3, Potássio, Magnésio' } },
-    { name: 'Umbu', benefits: 'Hidratante, rico em vitamina C, antioxidante', category: 'Frutas', nutrition: { calories: '37 kcal/100g', protein: '1.2g', carbs: '8g', fiber: '2.1g', vitamins: 'Vitamina C, Cálcio, Fósforo' } },
-    { name: 'Uva', benefits: 'Antioxidante, cardioprotetora, anti-inflamatória', category: 'Frutas', nutrition: { calories: '69 kcal/100g', protein: '0.7g', carbs: '18g', fiber: '0.9g', vitamins: 'Vitamina C, K, Potássio' } },
-    { name: 'Uva-passa', benefits: 'Energética, rica em ferro, antioxidante', category: 'Frutas', nutrition: { calories: '299 kcal/100g', protein: '3.1g', carbs: '79g', fiber: '3.7g', vitamins: 'Ferro, Potássio, Vitamina B6' } },
-    { name: 'Açaí-banana', benefits: 'Energético, rico em potássio, antioxidante', category: 'Frutas', nutrition: { calories: '80 kcal/100g', protein: '1.3g', carbs: '18g', fiber: '3.5g', vitamins: 'Vitamina A, C, Potássio' } },
-    { name: 'Atemoia', benefits: 'Rica em vitamina C, energética, antioxidante', category: 'Frutas', nutrition: { calories: '94 kcal/100g', protein: '2.1g', carbs: '24g', fiber: '2.4g', vitamins: 'Vitamina C, B6, Potássio' } },
-    { name: 'Cacau', benefits: 'Antioxidante potente, melhora humor, cardioprotetor', category: 'Frutas', nutrition: { calories: '228 kcal/100g', protein: '19.6g', carbs: '57.9g', fiber: '33.2g', vitamins: 'Magnésio, Ferro, Zinco' } },
-    { name: 'Cajá', benefits: 'Rico em vitamina C, antioxidante, digestivo', category: 'Frutas', nutrition: { calories: '46 kcal/100g', protein: '1.1g', carbs: '11g', fiber: '1.7g', vitamins: 'Vitamina C, A, Cálcio' } },
-    { name: 'Cupuaçu', benefits: 'Antioxidante, energético, fortalece imunidade', category: 'Frutas', nutrition: { calories: '49 kcal/100g', protein: '1.5g', carbs: '11g', fiber: '1.6g', vitamins: 'Vitamina C, B1, B2, B3' } },
-    { name: 'Physalis', benefits: 'Antioxidante, anti-inflamatório, rico em vitamina C', category: 'Frutas', nutrition: { calories: '53 kcal/100g', protein: '1.9g', carbs: '11g', fiber: '0g', vitamins: 'Vitamina C, A, Ferro' } },
-    
-    // LEGUMES E VEGETAIS (50 itens)
-    { name: 'Abóbora', benefits: 'Rica em vitamina A, fibras, antioxidante, melhora visão', category: 'Legumes', nutrition: { calories: '26 kcal/100g', protein: '1g', carbs: '7g', fiber: '0.5g', vitamins: 'Vitamina A, C, E, Potássio' } },
-    { name: 'Abobrinha', benefits: 'Baixa caloria, rica em fibras, hidratante', category: 'Legumes', nutrition: { calories: '17 kcal/100g', protein: '1.2g', carbs: '3g', fiber: '1g', vitamins: 'Vitamina C, B6, Potássio' } },
-    { name: 'Acelga', benefits: 'Rica em vitaminas K, A, C, antioxidante', category: 'Legumes', nutrition: { calories: '19 kcal/100g', protein: '1.8g', carbs: '3.7g', fiber: '1.6g', vitamins: 'Vitamina K, A, C, Magnésio' } },
-    { name: 'Agrião', benefits: 'Desintoxicante, rico em cálcio, antioxidante', category: 'Legumes', nutrition: { calories: '11 kcal/100g', protein: '2.3g', carbs: '1.3g', fiber: '0.5g', vitamins: 'Vitamina K, C, A, Cálcio' } },
-    { name: 'Alcachofra', benefits: 'Hepatoprotetora, digestiva, rica em fibras', category: 'Legumes', nutrition: { calories: '47 kcal/100g', protein: '3.3g', carbs: '11g', fiber: '5.4g', vitamins: 'Vitamina C, K, Ácido fólico, Magnésio' } },
-    { name: 'Alface', benefits: 'Hidratante, baixa caloria, rica em vitamina K', category: 'Legumes', nutrition: { calories: '15 kcal/100g', protein: '1.4g', carbs: '2.9g', fiber: '1.3g', vitamins: 'Vitamina K, A, C, Ácido fólico' } },
-    { name: 'Almeirão', benefits: 'Digestivo, depurativo, rico em fibras', category: 'Legumes', nutrition: { calories: '23 kcal/100g', protein: '1.7g', carbs: '4.7g', fiber: '3.1g', vitamins: 'Vitamina A, C, Cálcio, Ferro' } },
-    { name: 'Aspargo', benefits: 'Diurético, rico em ácido fólico, antioxidante', category: 'Legumes', nutrition: { calories: '20 kcal/100g', protein: '2.2g', carbs: '3.9g', fiber: '2.1g', vitamins: 'Vitamina K, A, C, Ácido fólico' } },
-    { name: 'Batata-doce', benefits: 'Energética, rica em fibras, vitamina A', category: 'Legumes', nutrition: { calories: '86 kcal/100g', protein: '1.6g', carbs: '20g', fiber: '3g', vitamins: 'Vitamina A, C, B6, Potássio' } },
-    { name: 'Batata-inglesa', benefits: 'Energética, rica em potássio, vitamina C', category: 'Legumes', nutrition: { calories: '77 kcal/100g', protein: '2g', carbs: '17g', fiber: '2.2g', vitamins: 'Vitamina C, B6, Potássio' } },
-    { name: 'Berinjela', benefits: 'Reduz colesterol, antioxidante, rica em fibras', category: 'Legumes', nutrition: { calories: '25 kcal/100g', protein: '1g', carbs: '6g', fiber: '3g', vitamins: 'Vitamina K, C, B6, Manganês' } },
-    { name: 'Beterraba', benefits: 'Melhora circulação, rica em ferro, antioxidante', category: 'Legumes', nutrition: { calories: '43 kcal/100g', protein: '1.6g', carbs: '10g', fiber: '2.8g', vitamins: 'Ácido fólico, Manganês, Potássio' } },
-    { name: 'Brócolis', benefits: 'Anticancerígeno, rico em cálcio, vitamina C', category: 'Legumes', nutrition: { calories: '34 kcal/100g', protein: '2.8g', carbs: '7g', fiber: '2.6g', vitamins: 'Vitamina C, K, Ácido fólico, Cálcio' } },
-    { name: 'Cebola', benefits: 'Antibacteriana, anti-inflamatória, antioxidante', category: 'Legumes', nutrition: { calories: '40 kcal/100g', protein: '1.1g', carbs: '9g', fiber: '1.7g', vitamins: 'Vitamina C, B6, Manganês' } },
-    { name: 'Cenoura', benefits: 'Rica em vitamina A, antioxidante, melhora visão', category: 'Legumes', nutrition: { calories: '41 kcal/100g', protein: '0.9g', carbs: '10g', fiber: '2.8g', vitamins: 'Vitamina A, K, C, Potássio' } },
-    { name: 'Chicória', benefits: 'Digestiva, depurativa, rica em fibras', category: 'Legumes', nutrition: { calories: '23 kcal/100g', protein: '1.7g', carbs: '4.7g', fiber: '3.1g', vitamins: 'Vitamina A, K, C, Ácido fólico' } },
-    { name: 'Chuchu', benefits: 'Diurético, baixa caloria, rico em fibras', category: 'Legumes', nutrition: { calories: '19 kcal/100g', protein: '0.8g', carbs: '4.5g', fiber: '1.7g', vitamins: 'Vitamina C, B6, Zinco' } },
-    { name: 'Cogumelo Shiitake', benefits: 'Fortalece imunidade, antioxidante, rico em vitamina D', category: 'Legumes', nutrition: { calories: '34 kcal/100g', protein: '2.2g', carbs: '7g', fiber: '2.5g', vitamins: 'Vitamina D, B, Selênio, Cobre' } },
-    { name: 'Couve', benefits: 'Rica em cálcio, ferro, vitamina K, desintoxicante', category: 'Legumes', nutrition: { calories: '49 kcal/100g', protein: '4.3g', carbs: '9g', fiber: '2g', vitamins: 'Vitamina K, A, C, Cálcio, Ferro' } },
-    { name: 'Couve-de-bruxelas', benefits: 'Anticancerígena, rica em vitamina C, K', category: 'Legumes', nutrition: { calories: '43 kcal/100g', protein: '3.4g', carbs: '9g', fiber: '3.8g', vitamins: 'Vitamina C, K, Ácido fólico' } },
-    { name: 'Couve-flor', benefits: 'Anticancerígena, rica em fibras, vitamina C', category: 'Legumes', nutrition: { calories: '25 kcal/100g', protein: '1.9g', carbs: '5g', fiber: '2g', vitamins: 'Vitamina C, K, B6, Ácido fólico' } },
-    { name: 'Ervilha', benefits: 'Rica em proteínas vegetais, fibras, vitaminas', category: 'Legumes', nutrition: { calories: '81 kcal/100g', protein: '5.4g', carbs: '14g', fiber: '5.7g', vitamins: 'Vitamina K, C, B1, Ácido fólico' } },
-    { name: 'Espinafre', benefits: 'Rico em ferro, cálcio, antioxidante', category: 'Legumes', nutrition: { calories: '23 kcal/100g', protein: '2.9g', carbs: '3.6g', fiber: '2.2g', vitamins: 'Vitamina K, A, C, Ferro, Cálcio' } },
-    { name: 'Inhame', benefits: 'Energético, anti-inflamatório, fortalece imunidade', category: 'Legumes', nutrition: { calories: '118 kcal/100g', protein: '1.5g', carbs: '28g', fiber: '4.1g', vitamins: 'Vitamina C, B6, Potássio, Manganês' } },
-    { name: 'Jiló', benefits: 'Digestivo, rico em fibras, antioxidante', category: 'Legumes', nutrition: { calories: '24 kcal/100g', protein: '1.4g', carbs: '5.4g', fiber: '3.4g', vitamins: 'Vitamina C, B5, Cálcio' } },
-    { name: 'Mandioca', benefits: 'Energética, rica em carboidratos, sem glúten', category: 'Legumes', nutrition: { calories: '160 kcal/100g', protein: '1.4g', carbs: '38g', fiber: '1.8g', vitamins: 'Vitamina C, B6, Potássio' } },
-    { name: 'Mandioquinha', benefits: 'Digestiva, energética, rica em vitaminas', category: 'Legumes', nutrition: { calories: '133 kcal/100g', protein: '1.2g', carbs: '32g', fiber: '2.3g', vitamins: 'Vitamina A, C, B3, Potássio' } },
-    { name: 'Maxixe', benefits: 'Diurético, baixa caloria, rico em fibras', category: 'Legumes', nutrition: { calories: '19 kcal/100g', protein: '0.7g', carbs: '4.2g', fiber: '1.5g', vitamins: 'Vitamina C, Cálcio, Fósforo' } },
-    { name: 'Nabo', benefits: 'Diurético, rico em vitamina C, antioxidante', category: 'Legumes', nutrition: { calories: '28 kcal/100g', protein: '0.9g', carbs: '6g', fiber: '1.8g', vitamins: 'Vitamina C, B6, Cálcio' } },
-    { name: 'Palmito', benefits: 'Baixa caloria, rico em fibras, minerais', category: 'Legumes', nutrition: { calories: '26 kcal/100g', protein: '2.5g', carbs: '4.6g', fiber: '1.8g', vitamins: 'Vitamina C, B6, Potássio, Zinco' } },
-    { name: 'Pepino', benefits: 'Hidratante, diurético, baixa caloria', category: 'Legumes', nutrition: { calories: '15 kcal/100g', protein: '0.7g', carbs: '3.6g', fiber: '0.5g', vitamins: 'Vitamina K, C, Potássio' } },
-    { name: 'Pimentão Amarelo', benefits: 'Rico em vitamina C, antioxidante, anti-inflamatório', category: 'Legumes', nutrition: { calories: '27 kcal/100g', protein: '1g', carbs: '6g', fiber: '0.9g', vitamins: 'Vitamina C, A, B6, Ácido fólico' } },
-    { name: 'Pimentão Verde', benefits: 'Rico em vitamina C, antioxidante, digestivo', category: 'Legumes', nutrition: { calories: '20 kcal/100g', protein: '0.9g', carbs: '4.6g', fiber: '1.7g', vitamins: 'Vitamina C, B6, K' } },
-    { name: 'Pimentão Vermelho', benefits: 'Rico em vitamina C, licopeno, antioxidante', category: 'Legumes', nutrition: { calories: '31 kcal/100g', protein: '1g', carbs: '6g', fiber: '2.1g', vitamins: 'Vitamina C, A, B6, Ácido fólico' } },
-    { name: 'Quiabo', benefits: 'Rico em fibras, vitamina C, digestivo', category: 'Legumes', nutrition: { calories: '33 kcal/100g', protein: '1.9g', carbs: '7g', fiber: '3.2g', vitamins: 'Vitamina C, K, Ácido fólico, Magnésio' } },
-    { name: 'Rabanete', benefits: 'Digestivo, diurético, rico em vitamina C', category: 'Legumes', nutrition: { calories: '16 kcal/100g', protein: '0.7g', carbs: '3.4g', fiber: '1.6g', vitamins: 'Vitamina C, Potássio, Ácido fólico' } },
-    { name: 'Radicchio', benefits: 'Antioxidante, digestivo, rico em vitamina K', category: 'Legumes', nutrition: { calories: '23 kcal/100g', protein: '1.4g', carbs: '4.5g', fiber: '0.9g', vitamins: 'Vitamina K, C, Cobre' } },
-    { name: 'Repolho Branco', benefits: 'Anticancerígeno, digestivo, rico em fibras', category: 'Legumes', nutrition: { calories: '25 kcal/100g', protein: '1.3g', carbs: '6g', fiber: '2.5g', vitamins: 'Vitamina C, K, Ácido fólico' } },
-    { name: 'Repolho Roxo', benefits: 'Antioxidante potente, anti-inflamatório, anticancerígeno', category: 'Legumes', nutrition: { calories: '31 kcal/100g', protein: '1.4g', carbs: '7g', fiber: '2.1g', vitamins: 'Vitamina C, K, A, Antocianinas' } },
-    { name: 'Rúcula', benefits: 'Desintoxicante, rica em cálcio, antioxidante', category: 'Legumes', nutrition: { calories: '25 kcal/100g', protein: '2.6g', carbs: '3.7g', fiber: '1.6g', vitamins: 'Vitamina K, A, C, Cálcio' } },
-    { name: 'Salsão', benefits: 'Diurético, anti-inflamatório, baixa caloria', category: 'Legumes', nutrition: { calories: '16 kcal/100g', protein: '0.7g', carbs: '3g', fiber: '1.6g', vitamins: 'Vitamina K, C, Potássio, Ácido fólico' } },
-    { name: 'Tomate', benefits: 'Rico em licopeno, antioxidante, cardioprotetor', category: 'Legumes', nutrition: { calories: '18 kcal/100g', protein: '0.9g', carbs: '3.9g', fiber: '1.2g', vitamins: 'Vitamina C, K, Potássio, Licopeno' } },
-    { name: 'Tomate Cereja', benefits: 'Antioxidante, rico em licopeno, vitamina C', category: 'Legumes', nutrition: { calories: '18 kcal/100g', protein: '0.9g', carbs: '3.9g', fiber: '1.2g', vitamins: 'Vitamina C, A, Licopeno' } },
-    { name: 'Vagem', benefits: 'Rica em fibras, vitamina C, baixa caloria', category: 'Legumes', nutrition: { calories: '31 kcal/100g', protein: '1.8g', carbs: '7g', fiber: '2.7g', vitamins: 'Vitamina C, K, A, Ácido fólico' } },
-    { name: 'Abóbora Cabotiá', benefits: 'Rica em betacaroteno, fibras, antioxidante', category: 'Legumes', nutrition: { calories: '40 kcal/100g', protein: '1.1g', carbs: '10g', fiber: '2g', vitamins: 'Vitamina A, C, E, Potássio' } },
-    { name: 'Abóbora Moranga', benefits: 'Rica em vitamina A, fibras, minerais', category: 'Legumes', nutrition: { calories: '26 kcal/100g', protein: '1g', carbs: '6.5g', fiber: '0.5g', vitamins: 'Vitamina A, C, Cálcio, Ferro' } },
-    { name: 'Batata Baroa', benefits: 'Digestiva, energética, rica em vitamina A', category: 'Legumes', nutrition: { calories: '133 kcal/100g', protein: '1.2g', carbs: '32g', fiber: '2.3g', vitamins: 'Vitamina A, C, B3, Potássio' } },
-    { name: 'Beterraba Dourada', benefits: 'Antioxidante, rica em betalaínas, digestiva', category: 'Legumes', nutrition: { calories: '43 kcal/100g', protein: '1.6g', carbs: '10g', fiber: '2.8g', vitamins: 'Ácido fólico, Manganês, Potássio' } },
-    { name: 'Couve Kale', benefits: 'Superalimento, rica em cálcio, vitamina K', category: 'Legumes', nutrition: { calories: '49 kcal/100g', protein: '4.3g', carbs: '9g', fiber: '2g', vitamins: 'Vitamina K, A, C, Cálcio, Ferro' } },
-    { name: 'Raiz de Lótus', benefits: 'Rica em fibras, vitamina C, antioxidante', category: 'Legumes', nutrition: { calories: '74 kcal/100g', protein: '2.6g', carbs: '17g', fiber: '4.9g', vitamins: 'Vitamina C, B6, Potássio, Cobre' } }
-  ];
-  
-  // Receitas Premium expandidas
-  const premiumRecipes = [
-    {
-      name: 'Bowl de Açaí Energético',
-      type: 'Vegano',
-      ingredients: ['Açaí', 'Banana', 'Morango', 'Granola', 'Mel'],
-      benefits: 'Alto em antioxidantes, energético, rico em fibras',
-      prepTime: '10 min'
-    },
-    {
-      name: 'Smoothie Verde Detox',
-      type: 'Vegano',
-      ingredients: ['Espinafre', 'Abacaxi', 'Gengibre', 'Limão', 'Água de coco'],
-      benefits: 'Desintoxicante, anti-inflamatório, hidratante',
-      prepTime: '5 min'
-    },
-    {
-      name: 'Salada Arco-Íris',
-      type: 'Vegetariano',
-      ingredients: ['Rúcula', 'Beterraba', 'Cenoura', 'Tomate', 'Abacate', 'Limão'],
-      benefits: 'Rica em vitaminas, antioxidante, cardioprotetora',
-      prepTime: '15 min'
-    },
-    {
-      name: 'Curry de Grão-de-Bico',
-      type: 'Vegano',
-      ingredients: ['Grão-de-bico', 'Açafrão', 'Gengibre', 'Tomate', 'Espinafre', 'Leite de coco'],
-      benefits: 'Rico em proteínas, anti-inflamatório, digestivo',
-      prepTime: '30 min'
-    },
-    {
-      name: 'Sopa de Abóbora com Gengibre',
-      type: 'Vegano',
-      ingredients: ['Abóbora', 'Gengibre', 'Alho', 'Cebola', 'Leite de coco'],
-      benefits: 'Imunológico, digestivo, anti-inflamatório',
-      prepTime: '25 min'
-    },
-    {
-      name: 'Wrap de Hummus e Vegetais',
-      type: 'Vegano',
-      ingredients: ['Grão-de-bico', 'Pepino', 'Tomate', 'Alface', 'Tahine', 'Tortilla integral'],
-      benefits: 'Rico em proteínas, fibras, vitaminas',
-      prepTime: '15 min'
-    },
-    {
-      name: 'Risoto de Cogumelos',
-      type: 'Vegetariano',
-      ingredients: ['Arroz integral', 'Cogumelos shiitake', 'Alho', 'Tomilho', 'Queijo parmesão'],
-      benefits: 'Rico em fibras, proteínas, antioxidante',
-      prepTime: '40 min'
-    },
-    {
-      name: 'Tacos Veganos de Lentilha',
-      type: 'Vegano',
-      ingredients: ['Lentilha', 'Cominho', 'Páprica', 'Abacate', 'Tomate', 'Tortilla de milho'],
-      benefits: 'Alto em proteínas, fibras, ferro',
-      prepTime: '25 min'
-    },
-    {
-      name: 'Buddha Bowl Completo',
-      type: 'Vegano',
-      ingredients: ['Quinoa', 'Batata-doce', 'Brócolis', 'Grão-de-bico', 'Tahine', 'Couve'],
-      benefits: 'Refeição completa, rica em nutrientes',
-      prepTime: '35 min'
-    },
-    {
-      name: 'Panquecas de Banana e Aveia',
-      type: 'Vegetariano',
-      ingredients: ['Banana', 'Aveia', 'Canela', 'Mel', 'Frutas vermelhas'],
-      benefits: 'Energético, rico em fibras, antioxidante',
-      prepTime: '15 min'
-    },
-    {
-      name: 'Pasta ao Pesto de Rúcula',
-      type: 'Vegetariano',
-      ingredients: ['Massa integral', 'Rúcula', 'Alho', 'Castanhas', 'Azeite', 'Parmesão'],
-      benefits: 'Rico em fibras, antioxidante, cardioprotetor',
-      prepTime: '20 min'
-    },
-    {
-      name: 'Chili Vegano',
-      type: 'Vegano',
-      ingredients: ['Feijão', 'Tomate', 'Pimentão', 'Cominho', 'Páprica', 'Milho'],
-      benefits: 'Rico em proteínas, fibras, antioxidante',
-      prepTime: '45 min'
-    },
-    {
-      name: 'Hambúrguer de Grão-de-Bico',
-      type: 'Vegano',
-      ingredients: ['Grão-de-bico', 'Aveia', 'Cebola', 'Alho', 'Cominho', 'Coentro'],
-      benefits: 'Alto em proteínas vegetais, fibras',
-      prepTime: '30 min'
-    },
-    {
-      name: 'Lasanha de Berinjela',
-      type: 'Vegetariano',
-      ingredients: ['Berinjela', 'Tomate', 'Manjericão', 'Queijo ricota', 'Mussarela'],
-      benefits: 'Baixa em carboidratos, rica em fibras',
-      prepTime: '50 min'
-    },
-    {
-      name: 'Falafel Assado',
-      type: 'Vegano',
-      ingredients: ['Grão-de-bico', 'Salsa', 'Coentro', 'Cominho', 'Alho', 'Tahine'],
-      benefits: 'Rico em proteínas, fibras, minerais',
-      prepTime: '35 min'
-    },
-    {
-      name: 'Quiche de Espinafre',
-      type: 'Vegetariano',
-      ingredients: ['Espinafre', 'Ovos', 'Queijo', 'Cebola', 'Massa integral'],
-      benefits: 'Rico em ferro, cálcio, proteínas',
-      prepTime: '45 min'
-    },
-    {
-      name: 'Strogonoff de Cogumelos',
-      type: 'Vegano',
-      ingredients: ['Cogumelos', 'Creme de castanha', 'Tomate', 'Mostarda', 'Arroz integral'],
-      benefits: 'Rico em proteínas, vitamina D',
-      prepTime: '30 min'
-    },
-    {
-      name: 'Pad Thai Vegano',
-      type: 'Vegano',
-      ingredients: ['Macarrão de arroz', 'Tofu', 'Broto de feijão', 'Amendoim', 'Molho de tamarindo'],
-      benefits: 'Rico em proteínas, vitaminas do complexo B',
-      prepTime: '25 min'
-    },
-    {
-      name: 'Sushi Vegano',
-      type: 'Vegano',
-      ingredients: ['Arroz', 'Nori', 'Abacate', 'Pepino', 'Cenoura', 'Gergelim'],
-      benefits: 'Baixa caloria, rico em fibras',
-      prepTime: '40 min'
-    },
-    {
-      name: 'Pizza Integral de Vegetais',
-      type: 'Vegetariano',
-      ingredients: ['Massa integral', 'Tomate', 'Pimentão', 'Cogumelos', 'Mussarela', 'Manjericão'],
-      benefits: 'Rico em fibras, vitaminas, minerais',
-      prepTime: '35 min'
-    },
-    {
-      name: 'Tabule Libanês',
-      type: 'Vegano',
-      ingredients: ['Trigo para quibe', 'Tomate', 'Pepino', 'Salsa', 'Hortelã', 'Limão'],
-      benefits: 'Rico em fibras, vitaminas, refrescante',
-      prepTime: '20 min'
-    },
-    {
-      name: 'Moqueca de Palmito',
-      type: 'Vegano',
-      ingredients: ['Palmito', 'Tomate', 'Pimentão', 'Leite de coco', 'Coentro', 'Dendê'],
-      benefits: 'Rico em fibras, baixa caloria',
-      prepTime: '30 min'
-    },
-    {
-      name: 'Escondidinho de Batata-doce',
-      type: 'Vegano',
-      ingredients: ['Batata-doce', 'Proteína de soja', 'Tomate', 'Cebola', 'Alho'],
-      benefits: 'Rico em vitamina A, proteínas, fibras',
-      prepTime: '45 min'
-    },
-    {
-      name: 'Creme de Abóbora com Castanhas',
-      type: 'Vegano',
-      ingredients: ['Abóbora', 'Castanha-do-pará', 'Gengibre', 'Leite de coco', 'Noz-moscada'],
-      benefits: 'Rico em vitamina A, selênio, antioxidante',
-      prepTime: '25 min'
-    },
-    {
-      name: 'Salada de Quinoa Mediterrânea',
-      type: 'Vegano',
-      ingredients: ['Quinoa', 'Tomate cereja', 'Pepino', 'Azeitona', 'Hortelã', 'Limão'],
-      benefits: 'Proteína completa, rica em minerais',
-      prepTime: '20 min'
-    },
-    {
-      name: 'Bolinho de Arroz Integral',
-      type: 'Vegano',
-      ingredients: ['Arroz integral', 'Cenoura', 'Salsinha', 'Alho', 'Farinha de linhaça'],
-      benefits: 'Rico em fibras, ômega-3',
-      prepTime: '30 min'
-    },
-    {
-      name: 'Cuscuz Marroquino com Vegetais',
-      type: 'Vegano',
-      ingredients: ['Cuscuz', 'Abobrinha', 'Berinjela', 'Grão-de-bico', 'Cominho', 'Hortelã'],
-      benefits: 'Rico em fibras, proteínas, vitaminas',
-      prepTime: '25 min'
-    },
-    {
-      name: 'Torta de Legumes',
-      type: 'Vegetariano',
-      ingredients: ['Massa integral', 'Brócolis', 'Cenoura', 'Ovos', 'Queijo', 'Tomate'],
-      benefits: 'Rico em vitaminas, cálcio, proteínas',
-      prepTime: '50 min'
-    },
-    {
-      name: 'Nhoque de Batata-doce',
-      type: 'Vegano',
-      ingredients: ['Batata-doce', 'Farinha integral', 'Molho de tomate', 'Manjericão', 'Alho'],
-      benefits: 'Rico em vitamina A, fibras, energético',
-      prepTime: '40 min'
-    },
-    {
-      name: 'Berinjela à Parmegiana Vegana',
-      type: 'Vegano',
-      ingredients: ['Berinjela', 'Molho de tomate', 'Queijo vegano', 'Manjericão', 'Orégano'],
-      benefits: 'Baixa caloria, rica em fibras',
-      prepTime: '45 min'
-    }
-  ];
-  
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-teal-50 via-emerald-50 to-green-50">
-      {/* Header Melhorado */}
-      <header className="bg-white/80 backdrop-blur-md border-b border-emerald-100 shadow-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-5">
-          <div className="flex items-center justify-between">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50">
+      {/* Header */}
+      <header className="bg-white/90 backdrop-blur-md border-b border-emerald-200 sticky top-0 z-50 shadow-lg">
+        <div className="container mx-auto px-4 py-4 sm:py-6">
+          <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="bg-gradient-to-br from-emerald-400 to-teal-500 p-2.5 rounded-2xl shadow-lg">
-                <Leaf className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+              <div className="bg-gradient-to-br from-emerald-500 to-green-600 p-3 rounded-2xl shadow-lg">
+                <Leaf className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
                   FitoSaúde
                 </h1>
-                <p className="text-xs sm:text-sm text-gray-600 font-medium">Seu guia completo de saúde natural</p>
+                <p className="text-xs sm:text-sm text-gray-600">Seu guia completo de saúde natural</p>
               </div>
             </div>
-            {isPremium && (
-              <Badge className="bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow-md px-3 py-1">
-                <Crown className="w-3.5 h-3.5 mr-1.5" />
-                Premium
-              </Badge>
-            )}
+            
+            <button
+              onClick={() => {
+                setIsPremium(!isPremium);
+                localStorage.setItem("fitosaude_premium", JSON.stringify(!isPremium));
+              }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all ${
+                isPremium
+                  ? "bg-gradient-to-r from-amber-500 to-yellow-600 text-white shadow-lg"
+                  : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+              }`}
+            >
+              {isPremium ? <Award className="w-5 h-5" /> : <Lock className="w-5 h-5" />}
+              <span className="hidden sm:inline">{isPremium ? "Premium" : "Gratuito"}</span>
+            </button>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex gap-2 justify-center flex-wrap">
+            <button
+              onClick={() => setActiveTab("catalogo")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all ${
+                activeTab === "catalogo"
+                  ? "bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-lg"
+                  : "bg-white text-gray-600 hover:bg-emerald-50"
+              }`}
+            >
+              <Apple className="w-4 h-4" />
+              <span>Catálogo</span>
+            </button>
+            <button
+              onClick={() => setActiveTab("receitas")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all ${
+                activeTab === "receitas"
+                  ? "bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-lg"
+                  : "bg-white text-gray-600 hover:bg-emerald-50"
+              }`}
+            >
+              <ChefHat className="w-4 h-4" />
+              <span>Receitas</span>
+              {isPremium && <Award className="w-3 h-3 text-amber-300" />}
+            </button>
+            <button
+              onClick={() => setActiveTab("dashboard")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all ${
+                activeTab === "dashboard"
+                  ? "bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-lg"
+                  : "bg-white text-gray-600 hover:bg-emerald-50"
+              }`}
+            >
+              <Activity className="w-4 h-4" />
+              <span>Dashboard</span>
+              {isPremium && <Award className="w-3 h-3 text-amber-300" />}
+            </button>
           </div>
         </div>
       </header>
 
-      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 gap-2 bg-white/80 backdrop-blur-sm p-2 rounded-2xl shadow-md border border-emerald-100">
-            <TabsTrigger 
-              value="dashboard" 
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-400 data-[state=active]:to-teal-500 data-[state=active]:text-white rounded-xl transition-all"
-            >
-              <TrendingUp className="w-4 h-4 mr-0 sm:mr-2" />
-              <span className="hidden sm:inline">Dashboard</span>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="registro" 
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-400 data-[state=active]:to-teal-500 data-[state=active]:text-white rounded-xl transition-all"
-            >
-              <Calendar className="w-4 h-4 mr-0 sm:mr-2" />
-              <span className="hidden sm:inline">Registro</span>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="catalogo" 
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-400 data-[state=active]:to-teal-500 data-[state=active]:text-white rounded-xl transition-all"
-            >
-              <Apple className="w-4 h-4 mr-0 sm:mr-2" />
-              <span className="hidden sm:inline">Catálogo</span>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="receitas" 
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-400 data-[state=active]:to-teal-500 data-[state=active]:text-white rounded-xl transition-all"
-            >
-              <ChefHat className="w-4 h-4 mr-0 sm:mr-2" />
-              <span className="hidden sm:inline">Receitas</span>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="metas" 
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-400 data-[state=active]:to-teal-500 data-[state=active]:text-white rounded-xl transition-all"
-            >
-              <Target className="w-4 h-4 mr-0 sm:mr-2" />
-              <span className="hidden sm:inline">Metas</span>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="planos" 
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-400 data-[state=active]:to-teal-500 data-[state=active]:text-white rounded-xl transition-all"
-            >
-              <Sparkles className="w-4 h-4 mr-0 sm:mr-2" />
-              <span className="hidden sm:inline">Planos</span>
-            </TabsTrigger>
-          </TabsList>
+      <main className="container mx-auto px-4 py-6 sm:py-8">
+        {/* TAB: CATÁLOGO */}
+        {activeTab === "catalogo" && (
+          <div className="space-y-6">
+            {/* Busca e Filtros */}
+            <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 border border-emerald-100">
+              <div className="relative mb-4">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Busque por produto ou benefício..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3 sm:py-4 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none transition-colors"
+                />
+              </div>
 
-          {/* Dashboard */}
-          <TabsContent value="dashboard" className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              <Card className="border-0 shadow-xl bg-gradient-to-br from-blue-50 to-blue-100/50 hover:shadow-2xl transition-all">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base sm:text-lg flex items-center gap-2 text-blue-700">
-                    <div className="bg-blue-500 p-2 rounded-xl shadow-md">
-                      <Apple className="w-5 h-5 text-white" />
-                    </div>
-                    Proteína
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-baseline">
-                      <span className="text-3xl sm:text-4xl font-bold text-blue-700">{todayEntry.protein}g</span>
-                      <span className="text-sm text-blue-600 font-medium">/ {goals.protein}g</span>
-                    </div>
-                    <Progress value={(todayEntry.protein / goals.protein) * 100} className="h-2.5 bg-blue-200" />
-                    <p className="text-xs text-blue-600 font-medium">
-                      {Math.round((todayEntry.protein / goals.protein) * 100)}% da meta diária
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-0 shadow-xl bg-gradient-to-br from-amber-50 to-amber-100/50 hover:shadow-2xl transition-all">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base sm:text-lg flex items-center gap-2 text-amber-700">
-                    <div className="bg-amber-500 p-2 rounded-xl shadow-md">
-                      <Carrot className="w-5 h-5 text-white" />
-                    </div>
-                    Fibra
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-baseline">
-                      <span className="text-3xl sm:text-4xl font-bold text-amber-700">{todayEntry.fiber}g</span>
-                      <span className="text-sm text-amber-600 font-medium">/ {goals.fiber}g</span>
-                    </div>
-                    <Progress value={(todayEntry.fiber / goals.fiber) * 100} className="h-2.5 bg-amber-200" />
-                    <p className="text-xs text-amber-600 font-medium">
-                      {Math.round((todayEntry.fiber / goals.fiber) * 100)}% da meta diária
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-0 shadow-xl bg-gradient-to-br from-cyan-50 to-cyan-100/50 hover:shadow-2xl transition-all sm:col-span-2 lg:col-span-1">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base sm:text-lg flex items-center gap-2 text-cyan-700">
-                    <div className="bg-cyan-500 p-2 rounded-xl shadow-md">
-                      <Droplets className="w-5 h-5 text-white" />
-                    </div>
-                    Água
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-baseline">
-                      <span className="text-3xl sm:text-4xl font-bold text-cyan-700">{todayEntry.water}ml</span>
-                      <span className="text-sm text-cyan-600 font-medium">/ {goals.water}ml</span>
-                    </div>
-                    <Progress value={(todayEntry.water / goals.water) * 100} className="h-2.5 bg-cyan-200" />
-                    <p className="text-xs text-cyan-600 font-medium">
-                      {Math.round((todayEntry.water / goals.water) * 100)}% da meta diária
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
+              <div className="flex gap-2 flex-wrap">
+                {categorias.map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => setSelectedCategoria(cat)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                      selectedCategoria === cat
+                        ? "bg-emerald-500 text-white shadow-md"
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {/* Histórico */}
-            <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-emerald-700">
-                  <Calendar className="w-5 h-5" />
-                  Histórico Recente
-                </CardTitle>
-                <CardDescription className="text-gray-600">Seus últimos registros nutricionais</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {history.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Activity className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-500 font-medium">Nenhum registro ainda</p>
-                    <p className="text-sm text-gray-400 mt-1">Comece adicionando seus dados!</p>
+            {/* Grid de Produtos */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {produtosFiltrados.map(produto => (
+                <div
+                  key={produto.id}
+                  className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-emerald-100 overflow-hidden group cursor-pointer"
+                  onClick={() => setSelectedProduto(produto)}
+                >
+                  <div className="bg-gradient-to-br from-emerald-500 to-green-600 p-4 sm:p-6">
+                    <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">{produto.nome}</h3>
+                    <span className="inline-block px-3 py-1 bg-white/20 rounded-full text-xs text-white font-medium">
+                      {produto.categoria}
+                    </span>
                   </div>
-                ) : (
-                  <div className="space-y-3">
-                    {history.slice(0, 5).map((entry, index) => (
-                      <div key={index} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-100 hover:shadow-md transition-all">
-                        <div className="flex items-center gap-3 mb-3 sm:mb-0">
-                          <div className="bg-white p-2 rounded-lg shadow-sm">
-                            <Calendar className="w-4 h-4 text-emerald-600" />
-                          </div>
-                          <span className="font-semibold text-gray-700">{entry.date}</span>
-                        </div>
-                        <div className="flex gap-4 sm:gap-6 text-sm font-medium">
-                          <span className="flex items-center gap-1 text-blue-600">
-                            <Apple className="w-4 h-4" />
-                            {entry.protein}g
+
+                  <div className="p-4 sm:p-6 space-y-4">
+                    <div>
+                      <h4 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-emerald-600" />
+                        Benefícios
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {produto.beneficios.slice(0, 3).map((ben, i) => (
+                          <span key={i} className="px-2 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-xs">
+                            {ben}
                           </span>
-                          <span className="flex items-center gap-1 text-amber-600">
-                            <Carrot className="w-4 h-4" />
-                            {entry.fiber}g
+                        ))}
+                      </div>
+                    </div>
+
+                    <button className="w-full py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl font-medium hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2">
+                      <Info className="w-4 h-4" />
+                      Ver Tabela Nutricional
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* TAB: RECEITAS */}
+        {activeTab === "receitas" && (
+          <div className="space-y-6">
+            {!isPremium && (
+              <div className="bg-gradient-to-r from-amber-500 to-yellow-600 text-white rounded-2xl shadow-lg p-6 text-center">
+                <Lock className="w-12 h-12 mx-auto mb-3" />
+                <h3 className="text-2xl font-bold mb-2">Conteúdo Premium</h3>
+                <p className="mb-4">Desbloqueie receitas exclusivas, veganas e vegetarianas!</p>
+                <button
+                  onClick={() => {
+                    setIsPremium(true);
+                    localStorage.setItem("fitosaude_premium", JSON.stringify(true));
+                  }}
+                  className="bg-white text-amber-600 px-6 py-3 rounded-xl font-bold hover:shadow-lg transition-all"
+                >
+                  Ativar Premium
+                </button>
+              </div>
+            )}
+
+            {isPremium && (
+              <>
+                <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 border border-emerald-100">
+                  <div className="relative">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Busque por receita ou ingrediente..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-12 pr-4 py-3 sm:py-4 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                  {receitasFiltradas.map(receita => (
+                    <div
+                      key={receita.id}
+                      className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-emerald-100 overflow-hidden cursor-pointer"
+                      onClick={() => setSelectedReceita(receita)}
+                    >
+                      <div className="bg-gradient-to-br from-green-500 to-teal-600 p-4 sm:p-6">
+                        <h3 className="text-xl font-bold text-white mb-2">{receita.nome}</h3>
+                        <div className="flex gap-2 flex-wrap">
+                          <span className="px-3 py-1 bg-white/20 rounded-full text-xs text-white font-medium">
+                            {receita.tipo}
                           </span>
-                          <span className="flex items-center gap-1 text-cyan-600">
-                            <Droplets className="w-4 h-4" />
-                            {entry.water}ml
+                          <span className="px-3 py-1 bg-white/20 rounded-full text-xs text-white font-medium">
+                            {receita.categoria}
                           </span>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
 
-            {/* Dicas de Saúde */}
-            <Card className="border-0 shadow-xl bg-gradient-to-br from-emerald-50 to-teal-50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-emerald-700">
-                  <Heart className="w-5 h-5" />
-                  Dicas de Saúde
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="p-4 bg-white rounded-xl border-l-4 border-emerald-500 shadow-sm hover:shadow-md transition-all">
-                  <p className="text-sm text-gray-700 font-medium">💧 Beba água regularmente ao longo do dia para manter a hidratação ideal</p>
-                </div>
-                <div className="p-4 bg-white rounded-xl border-l-4 border-blue-500 shadow-sm hover:shadow-md transition-all">
-                  <p className="text-sm text-gray-700 font-medium">🥗 Inclua vegetais coloridos em todas as refeições para garantir variedade de nutrientes</p>
-                </div>
-                <div className="p-4 bg-white rounded-xl border-l-4 border-amber-500 shadow-sm hover:shadow-md transition-all">
-                  <p className="text-sm text-gray-700 font-medium">🌿 Ervas e especiarias não só dão sabor, mas também trazem benefícios medicinais</p>
-                </div>
-                <div className="p-4 bg-white rounded-xl border-l-4 border-purple-500 shadow-sm hover:shadow-md transition-all">
-                  <p className="text-sm text-gray-700 font-medium">🍎 Frutas são excelentes fontes de vitaminas, fibras e antioxidantes naturais</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                      <div className="p-4 sm:p-6 space-y-3">
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <Clock className="w-4 h-4" />
+                          {receita.tempoPreparo}
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div className="bg-emerald-50 p-2 rounded-lg">
+                            <span className="font-semibold text-emerald-700">Calorias:</span> {receita.valorNutricional.calorias}
+                          </div>
+                          <div className="bg-emerald-50 p-2 rounded-lg">
+                            <span className="font-semibold text-emerald-700">Proteínas:</span> {receita.valorNutricional.proteinas}
+                          </div>
+                        </div>
 
-          {/* Registro */}
-          <TabsContent value="registro">
-            <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-emerald-700">
-                  <Calendar className="w-5 h-5" />
-                  Registrar Nutrição Diária
-                </CardTitle>
-                <CardDescription className="text-gray-600">Adicione seus dados nutricionais de hoje</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="protein" className="flex items-center gap-2 text-blue-700 font-semibold">
-                      <Apple className="w-4 h-4" />
-                      Proteína (g)
-                    </Label>
-                    <Input
-                      id="protein"
-                      type="number"
-                      placeholder="Ex: 45"
-                      value={protein}
-                      onChange={(e) => setProtein(e.target.value)}
-                      className="border-blue-200 focus:border-blue-400 focus:ring-blue-400 rounded-xl"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="fiber" className="flex items-center gap-2 text-amber-700 font-semibold">
-                      <Carrot className="w-4 h-4" />
-                      Fibra (g)
-                    </Label>
-                    <Input
-                      id="fiber"
-                      type="number"
-                      placeholder="Ex: 25"
-                      value={fiber}
-                      onChange={(e) => setFiber(e.target.value)}
-                      className="border-amber-200 focus:border-amber-400 focus:ring-amber-400 rounded-xl"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="water" className="flex items-center gap-2 text-cyan-700 font-semibold">
-                      <Droplets className="w-4 h-4" />
-                      Água (ml)
-                    </Label>
-                    <Input
-                      id="water"
-                      type="number"
-                      placeholder="Ex: 1500"
-                      value={water}
-                      onChange={(e) => setWater(e.target.value)}
-                      className="border-cyan-200 focus:border-cyan-400 focus:ring-cyan-400 rounded-xl"
-                    />
-                  </div>
+                        <button className="w-full py-3 bg-gradient-to-r from-green-500 to-teal-600 text-white rounded-xl font-medium hover:shadow-lg transition-all">
+                          Ver Receita Completa
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <Button 
-                  onClick={saveEntry} 
-                  className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-lg hover:shadow-xl transition-all rounded-xl py-6 text-base font-semibold"
+              </>
+            )}
+          </div>
+        )}
+
+        {/* TAB: DASHBOARD */}
+        {activeTab === "dashboard" && (
+          <div className="space-y-6">
+            {!isPremium && (
+              <div className="bg-gradient-to-r from-amber-500 to-yellow-600 text-white rounded-2xl shadow-lg p-6 text-center">
+                <Lock className="w-12 h-12 mx-auto mb-3" />
+                <h3 className="text-2xl font-bold mb-2">Dashboard Premium</h3>
+                <p className="mb-4">Acompanhe sua nutrição diária com gráficos e metas personalizadas!</p>
+                <button
+                  onClick={() => {
+                    setIsPremium(true);
+                    localStorage.setItem("fitosaude_premium", JSON.stringify(true));
+                  }}
+                  className="bg-white text-amber-600 px-6 py-3 rounded-xl font-bold hover:shadow-lg transition-all"
                 >
-                  <Check className="w-5 h-5 mr-2" />
-                  Salvar Registro
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                  Ativar Premium
+                </button>
+              </div>
+            )}
 
-          {/* Catálogo */}
-          <TabsContent value="catalogo">
-            <div className="space-y-6">
-              {['Condimentos', 'Ervas', 'Frutas', 'Legumes'].map((category) => (
-                <Card key={category} className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-emerald-700">
-                      {category === 'Condimentos' && <Leaf className="w-5 h-5 text-amber-600" />}
-                      {category === 'Ervas' && <Leaf className="w-5 h-5 text-green-600" />}
-                      {category === 'Frutas' && <Apple className="w-5 h-5 text-red-600" />}
-                      {category === 'Legumes' && <Carrot className="w-5 h-5 text-orange-600" />}
-                      {category}
-                    </CardTitle>
-                    <CardDescription className="text-gray-600">
-                      {catalog.filter(item => item.category === category).length} itens com tabelas nutricionais completas
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {catalog
-                        .filter(item => item.category === category)
-                        .map((item, index) => (
-                          <div key={index} className="p-5 bg-gradient-to-br from-white to-emerald-50/30 rounded-xl border border-emerald-100 hover:shadow-lg transition-all">
-                            <h4 className="font-bold text-gray-800 mb-2 text-lg">{item.name}</h4>
-                            <p className="text-sm text-gray-700 mb-3 leading-relaxed">{item.benefits}</p>
-                            <Separator className="my-3 bg-emerald-200" />
-                            <div className="space-y-1.5 text-xs">
-                              <p className="text-gray-600"><strong className="text-gray-700">Calorias:</strong> {item.nutrition.calories}</p>
-                              <p className="text-gray-600"><strong className="text-gray-700">Proteínas:</strong> {item.nutrition.protein}</p>
-                              <p className="text-gray-600"><strong className="text-gray-700">Carboidratos:</strong> {item.nutrition.carbs}</p>
-                              <p className="text-gray-600"><strong className="text-gray-700">Fibras:</strong> {item.nutrition.fiber}</p>
-                              <p className="text-gray-600"><strong className="text-gray-700">Vitaminas/Minerais:</strong> {item.nutrition.vitamins}</p>
+            {isPremium && (
+              <>
+                {/* Estatísticas do Dia */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-white rounded-2xl shadow-lg p-6 border border-emerald-100">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-semibold text-gray-700">Proteínas</h3>
+                      <Activity className="w-5 h-5 text-emerald-600" />
+                    </div>
+                    <p className="text-3xl font-bold text-emerald-600 mb-2">{registroHoje.proteinas}g</p>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-emerald-500 h-2 rounded-full transition-all"
+                        style={{ width: `${calcularProgresso(registroHoje.proteinas, metas.proteinas)}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">Meta: {metas.proteinas}g</p>
+                  </div>
+
+                  <div className="bg-white rounded-2xl shadow-lg p-6 border border-emerald-100">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-semibold text-gray-700">Fibras</h3>
+                      <Leaf className="w-5 h-5 text-green-600" />
+                    </div>
+                    <p className="text-3xl font-bold text-green-600 mb-2">{registroHoje.fibras}g</p>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-green-500 h-2 rounded-full transition-all"
+                        style={{ width: `${calcularProgresso(registroHoje.fibras, metas.fibras)}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">Meta: {metas.fibras}g</p>
+                  </div>
+
+                  <div className="bg-white rounded-2xl shadow-lg p-6 border border-emerald-100">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-semibold text-gray-700">Água</h3>
+                      <Droplet className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <p className="text-3xl font-bold text-blue-600 mb-2">{registroHoje.agua}ml</p>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-blue-500 h-2 rounded-full transition-all"
+                        style={{ width: `${calcularProgresso(registroHoje.agua, metas.agua)}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">Meta: {metas.agua}ml</p>
+                  </div>
+
+                  <div className="bg-white rounded-2xl shadow-lg p-6 border border-emerald-100">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-semibold text-gray-700">Calorias</h3>
+                      <TrendingUp className="w-5 h-5 text-orange-600" />
+                    </div>
+                    <p className="text-3xl font-bold text-orange-600 mb-2">{registroHoje.calorias}</p>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-orange-500 h-2 rounded-full transition-all"
+                        style={{ width: `${calcularProgresso(registroHoje.calorias, metas.calorias)}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">Meta: {metas.calorias} kcal</p>
+                  </div>
+                </div>
+
+                {/* Formulário de Registro */}
+                <div className="bg-white rounded-2xl shadow-lg p-6 border border-emerald-100">
+                  <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <Plus className="w-5 h-5 text-emerald-600" />
+                    Registrar Consumo
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Proteínas (g)</label>
+                      <input
+                        type="number"
+                        value={registroAtual.proteinas}
+                        onChange={(e) => setRegistroAtual({...registroAtual, proteinas: Number(e.target.value)})}
+                        className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 focus:border-emerald-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Fibras (g)</label>
+                      <input
+                        type="number"
+                        value={registroAtual.fibras}
+                        onChange={(e) => setRegistroAtual({...registroAtual, fibras: Number(e.target.value)})}
+                        className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 focus:border-emerald-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Água (ml)</label>
+                      <input
+                        type="number"
+                        value={registroAtual.agua}
+                        onChange={(e) => setRegistroAtual({...registroAtual, agua: Number(e.target.value)})}
+                        className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 focus:border-emerald-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Calorias</label>
+                      <input
+                        type="number"
+                        value={registroAtual.calorias}
+                        onChange={(e) => setRegistroAtual({...registroAtual, calorias: Number(e.target.value)})}
+                        className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 focus:border-emerald-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={adicionarRegistro}
+                    className="w-full py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl font-bold hover:shadow-lg transition-all"
+                  >
+                    Adicionar ao Registro de Hoje
+                  </button>
+                </div>
+
+                {/* Histórico */}
+                <div className="bg-white rounded-2xl shadow-lg p-6 border border-emerald-100">
+                  <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-emerald-600" />
+                    Histórico Nutricional
+                  </h3>
+                  
+                  {registros.length > 0 ? (
+                    <div className="space-y-3">
+                      {registros.slice(-7).reverse().map((reg, index) => (
+                        <div key={index} className="bg-emerald-50 rounded-xl p-4">
+                          <p className="font-semibold text-gray-800 mb-2">{new Date(reg.data).toLocaleDateString('pt-BR')}</p>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
+                            <div>
+                              <span className="text-gray-600">Proteínas:</span>
+                              <span className="font-semibold text-emerald-700 ml-1">{reg.proteinas}g</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Fibras:</span>
+                              <span className="font-semibold text-green-700 ml-1">{reg.fibras}g</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Água:</span>
+                              <span className="font-semibold text-blue-700 ml-1">{reg.agua}ml</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Calorias:</span>
+                              <span className="font-semibold text-orange-700 ml-1">{reg.calorias}</span>
                             </div>
                           </div>
-                        ))}</div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-center py-8">Nenhum registro ainda. Comece a registrar sua nutrição!</p>
+                  )}
+                </div>
 
-          {/* Receitas */}
-          <TabsContent value="receitas">
-            {!isPremium ? (
-              <Card className="border-0 shadow-xl bg-gradient-to-br from-amber-50 to-orange-50">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-amber-700">
-                    <Lock className="w-5 h-5" />
-                    Receitas Premium
-                  </CardTitle>
-                  <CardDescription className="text-amber-600">Desbloqueie 30+ receitas exclusivas com o plano Premium</CardDescription>
-                </CardHeader>
-                <CardContent className="text-center py-12">
-                  <Crown className="w-16 h-16 text-amber-500 mx-auto mb-4" />
-                  <h3 className="text-xl font-bold text-gray-800 mb-2">Conteúdo Exclusivo Premium</h3>
-                  <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                    Acesse mais de 30 receitas veganas e vegetarianas com benefícios detalhados para sua saúde
-                  </p>
-                  <Button 
-                    onClick={() => setActiveTab('planos')}
-                    className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-lg hover:shadow-xl transition-all rounded-xl px-8 py-6 text-base font-semibold"
-                  >
-                    <Crown className="w-5 h-5 mr-2" />
-                    Ver Planos Premium
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-6">
-                <Card className="border-0 shadow-xl bg-gradient-to-br from-emerald-50 to-teal-50">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-emerald-700">
-                      <Crown className="w-5 h-5 text-amber-500" />
-                      Receitas Premium Desbloqueadas
-                    </CardTitle>
-                    <CardDescription className="text-emerald-600">30 receitas veganas e vegetarianas exclusivas</CardDescription>
-                  </CardHeader>
-                </Card>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {premiumRecipes.map((recipe, index) => (
-                    <Card key={index} className="border-0 shadow-xl hover:shadow-2xl transition-all bg-white">
-                      <CardHeader>
-                        <div className="flex items-start justify-between">
-                          <CardTitle className="text-lg text-gray-800">{recipe.name}</CardTitle>
-                          <Badge className={recipe.type === 'Vegano' ? 'bg-green-500 shadow-md' : 'bg-blue-500 shadow-md'}>
-                            {recipe.type}
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-gray-500 font-medium">⏱️ {recipe.prepTime}</p>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div>
-                          <h4 className="font-semibold text-sm text-gray-700 mb-2">Ingredientes:</h4>
-                          <div className="flex flex-wrap gap-2">
-                            {recipe.ingredients.map((ing, i) => (
-                              <Badge key={i} variant="outline" className="text-xs border-emerald-200 text-emerald-700">
-                                {ing}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                        <Separator className="bg-emerald-100" />
-                        <div>
-                          <h4 className="font-semibold text-sm text-gray-700 mb-2">Benefícios:</h4>
-                          <p className="text-sm text-gray-600 leading-relaxed">{recipe.benefits}</p>
-                        </div>
-                      </CardContent>
-                    </Card>
+                {/* Dicas de Tratamento */}
+                <div className="bg-gradient-to-r from-emerald-500 to-green-600 rounded-2xl shadow-lg p-6 text-white">
+                  <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                    <Sparkles className="w-5 h-5" />
+                    Dicas de Saúde Premium
+                  </h3>
+                  <ul className="space-y-3">
+                    <li className="flex items-start gap-3">
+                      <span className="text-2xl">💧</span>
+                      <p>Beba água regularmente ao longo do dia para manter hidratação ideal</p>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="text-2xl">🥗</span>
+                      <p>Inclua vegetais verdes em todas as refeições para aumentar fibras</p>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="text-2xl">🌿</span>
+                      <p>Combine ervas medicinais com alimentação balanceada para melhores resultados</p>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="text-2xl">⏰</span>
+                      <p>Mantenha horários regulares de refeições para melhor digestão</p>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Definir Metas */}
+                <div className="bg-white rounded-2xl shadow-lg p-6 border border-emerald-100">
+                  <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <Target className="w-5 h-5 text-emerald-600" />
+                    Definir Metas Diárias
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Meta Proteínas (g)</label>
+                      <input
+                        type="number"
+                        value={metas.proteinas}
+                        onChange={(e) => {
+                          const novasMetas = {...metas, proteinas: Number(e.target.value)};
+                          setMetas(novasMetas);
+                          localStorage.setItem("fitosaude_metas", JSON.stringify(novasMetas));
+                        }}
+                        className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 focus:border-emerald-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Meta Fibras (g)</label>
+                      <input
+                        type="number"
+                        value={metas.fibras}
+                        onChange={(e) => {
+                          const novasMetas = {...metas, fibras: Number(e.target.value)};
+                          setMetas(novasMetas);
+                          localStorage.setItem("fitosaude_metas", JSON.stringify(novasMetas));
+                        }}
+                        className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 focus:border-emerald-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Meta Água (ml)</label>
+                      <input
+                        type="number"
+                        value={metas.agua}
+                        onChange={(e) => {
+                          const novasMetas = {...metas, agua: Number(e.target.value)};
+                          setMetas(novasMetas);
+                          localStorage.setItem("fitosaude_metas", JSON.stringify(novasMetas));
+                        }}
+                        className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 focus:border-emerald-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Meta Calorias</label>
+                      <input
+                        type="number"
+                        value={metas.calorias}
+                        onChange={(e) => {
+                          const novasMetas = {...metas, calorias: Number(e.target.value)};
+                          setMetas(novasMetas);
+                          localStorage.setItem("fitosaude_metas", JSON.stringify(novasMetas));
+                        }}
+                        className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 focus:border-emerald-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </main>
+
+      {/* Modal Produto */}
+      {selectedProduto && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full my-8 max-h-[90vh] overflow-y-auto">
+            <div className="bg-gradient-to-br from-emerald-500 to-green-600 p-6 sm:p-8 sticky top-0 z-10">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">{selectedProduto.nome}</h2>
+                  <span className="inline-block px-4 py-2 bg-white/20 rounded-full text-sm text-white font-medium">
+                    {selectedProduto.categoria}
+                  </span>
+                </div>
+                <button
+                  onClick={() => setSelectedProduto(null)}
+                  className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+                >
+                  <X className="w-6 h-6 text-white" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 sm:p-8 space-y-6">
+              {/* Tabela Nutricional */}
+              <div className="bg-emerald-50 rounded-xl p-6">
+                <h3 className="text-xl font-bold text-gray-800 mb-4">📊 Tabela Nutricional (100g)</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center py-2 border-b border-emerald-200">
+                    <span className="font-medium text-gray-700">Calorias</span>
+                    <span className="font-bold text-emerald-700">{selectedProduto.tabelaNutricional.calorias}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-emerald-200">
+                    <span className="font-medium text-gray-700">Proteínas</span>
+                    <span className="font-bold text-emerald-700">{selectedProduto.tabelaNutricional.proteinas}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-emerald-200">
+                    <span className="font-medium text-gray-700">Carboidratos</span>
+                    <span className="font-bold text-emerald-700">{selectedProduto.tabelaNutricional.carboidratos}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-emerald-200">
+                    <span className="font-medium text-gray-700">Fibras</span>
+                    <span className="font-bold text-emerald-700">{selectedProduto.tabelaNutricional.fibras}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-emerald-200">
+                    <span className="font-medium text-gray-700">Gorduras</span>
+                    <span className="font-bold text-emerald-700">{selectedProduto.tabelaNutricional.gorduras}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Vitaminas */}
+              <div>
+                <h3 className="text-xl font-bold text-gray-800 mb-3">💊 Vitaminas</h3>
+                <div className="flex flex-wrap gap-2">
+                  {selectedProduto.tabelaNutricional.vitaminas.map((vit, i) => (
+                    <span key={i} className="px-3 py-2 bg-purple-50 text-purple-700 rounded-lg text-sm font-medium">
+                      {vit}
+                    </span>
                   ))}
                 </div>
               </div>
-            )}
-          </TabsContent>
 
-          {/* Metas */}
-          <TabsContent value="metas">
-            <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-emerald-700">
-                  <Target className="w-5 h-5" />
-                  Definir Metas Diárias
-                </CardTitle>
-                <CardDescription className="text-gray-600">Personalize suas metas nutricionais</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="goalProtein" className="text-blue-700 font-semibold">Meta de Proteína (g)</Label>
-                    <Input
-                      id="goalProtein"
-                      type="number"
-                      value={goals.protein}
-                      onChange={(e) => updateGoals({ ...goals, protein: parseFloat(e.target.value) || 0 })}
-                      className="border-blue-200 focus:border-blue-400 focus:ring-blue-400 rounded-xl"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="goalFiber" className="text-amber-700 font-semibold">Meta de Fibra (g)</Label>
-                    <Input
-                      id="goalFiber"
-                      type="number"
-                      value={goals.fiber}
-                      onChange={(e) => updateGoals({ ...goals, fiber: parseFloat(e.target.value) || 0 })}
-                      className="border-amber-200 focus:border-amber-400 focus:ring-amber-400 rounded-xl"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="goalWater" className="text-cyan-700 font-semibold">Meta de Água (ml)</Label>
-                    <Input
-                      id="goalWater"
-                      type="number"
-                      value={goals.water}
-                      onChange={(e) => updateGoals({ ...goals, water: parseFloat(e.target.value) || 0 })}
-                      className="border-cyan-200 focus:border-cyan-400 focus:ring-cyan-400 rounded-xl"
-                    />
-                  </div>
-                </div>
-                
-                <div className="bg-gradient-to-br from-emerald-50 to-teal-50 p-6 rounded-xl border border-emerald-200 shadow-sm">
-                  <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                    <Sparkles className="w-5 h-5 text-emerald-600" />
-                    Recomendações Gerais
-                  </h3>
-                  <ul className="space-y-3 text-sm text-gray-700">
-                    <li className="flex items-start gap-2">
-                      <Check className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
-                      <span><strong className="text-gray-800">Proteína:</strong> 0.8-1g por kg de peso corporal (adultos)</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
-                      <span><strong className="text-gray-800">Fibra:</strong> 25-30g por dia para adultos</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
-                      <span><strong className="text-gray-800">Água:</strong> 2000-3000ml por dia (varia com atividade física)</span>
-                    </li>
-                  </ul>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Planos */}
-          <TabsContent value="planos">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Plano Básico */}
-              <Card className="border-0 shadow-xl bg-white hover:shadow-2xl transition-all">
-                <CardHeader>
-                  <CardTitle className="text-center text-gray-800">Básico</CardTitle>
-                  <CardDescription className="text-center text-gray-600">Para começar sua jornada</CardDescription>
-                  <div className="text-center py-4">
-                    <span className="text-4xl font-bold text-gray-800">Grátis</span>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <ul className="space-y-3">
-                    <li className="flex items-start gap-2">
-                      <Check className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm text-gray-700">Dashboard de nutrição</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm text-gray-700">Registro diário</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm text-gray-700">Catálogo completo (170+ itens)</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm text-gray-700">Tabelas nutricionais</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm text-gray-700">Definir metas</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm text-gray-700">Dicas de saúde</span>
-                    </li>
-                  </ul>
-                  <Button className="w-full rounded-xl" variant="outline" disabled>
-                    Plano Atual
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Plano Premium */}
-              <Card className="border-2 border-amber-300 shadow-2xl relative overflow-hidden bg-white hover:shadow-3xl transition-all transform hover:scale-105">
-                <div className="absolute top-0 right-0 bg-gradient-to-l from-amber-500 to-orange-500 text-white px-4 py-1.5 text-xs font-bold shadow-lg">
-                  RECOMENDADO
-                </div>
-                <CardHeader className="pt-8">
-                  <CardTitle className="text-center flex items-center justify-center gap-2 text-amber-700">
-                    <Crown className="w-6 h-6" />
-                    Premium
-                  </CardTitle>
-                  <CardDescription className="text-center text-amber-600">Experiência completa</CardDescription>
-                  <div className="text-center py-4">
-                    <span className="text-5xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-                      R$ 29,90
+              {/* Minerais */}
+              <div>
+                <h3 className="text-xl font-bold text-gray-800 mb-3">⚡ Minerais</h3>
+                <div className="flex flex-wrap gap-2">
+                  {selectedProduto.tabelaNutricional.minerais.map((min, i) => (
+                    <span key={i} className="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium">
+                      {min}
                     </span>
-                    <span className="text-gray-600 text-lg">/mês</span>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <ul className="space-y-3">
-                    <li className="flex items-start gap-2">
-                      <Check className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm font-semibold text-gray-800">Tudo do Básico +</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm text-gray-700">30+ receitas exclusivas</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm text-gray-700">Receitas veganas e vegetarianas</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm text-gray-700">Planos alimentares personalizados</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm text-gray-700">Dicas nutricionais avançadas</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm text-gray-700">Suporte prioritário</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm text-gray-700">Atualizações mensais</span>
-                    </li>
-                  </ul>
-                  <Button 
-                    className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-lg hover:shadow-xl transition-all rounded-xl py-6 text-base font-semibold"
-                    onClick={() => {
-                      setIsPremium(true);
-                      localStorage.setItem('fitoSaudePremium', 'true');
-                      setActiveTab('receitas');
-                    }}
-                  >
-                    <Crown className="w-5 h-5 mr-2" />
-                    Ativar Premium
-                  </Button>
-                </CardContent>
-              </Card>
+                  ))}
+                </div>
+              </div>
 
-              {/* Plano Profissional */}
-              <Card className="border-0 shadow-xl bg-white hover:shadow-2xl transition-all">
-                <CardHeader>
-                  <CardTitle className="text-center text-purple-700">Profissional</CardTitle>
-                  <CardDescription className="text-center text-purple-600">Para nutricionistas</CardDescription>
-                  <div className="text-center py-4">
-                    <span className="text-4xl font-bold text-purple-600">R$ 79,90</span>
-                    <span className="text-gray-600">/mês</span>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <ul className="space-y-3">
-                    <li className="flex items-start gap-2">
-                      <Check className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm font-semibold text-gray-800">Tudo do Premium +</span>
+              {/* Benefícios */}
+              <div>
+                <h3 className="text-xl font-bold text-gray-800 mb-3">✨ Benefícios para a Saúde</h3>
+                <ul className="space-y-2">
+                  {selectedProduto.beneficios.map((ben, i) => (
+                    <li key={i} className="flex items-start gap-3 text-gray-700">
+                      <Heart className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
+                      <span>{ben}</span>
                     </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm text-gray-700">Gestão de múltiplos pacientes</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm text-gray-700">Relatórios detalhados</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm text-gray-700">API de integração</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm text-gray-700">Suporte 24/7</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm text-gray-700">Treinamento exclusivo</span>
-                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Propriedades Medicinais */}
+              {selectedProduto.propriedadesMedicinais && (
+                <div className="bg-green-50 rounded-xl p-6">
+                  <h3 className="text-xl font-bold text-gray-800 mb-3">🌿 Propriedades Medicinais</h3>
+                  <ul className="space-y-2">
+                    {selectedProduto.propriedadesMedicinais.map((prop, i) => (
+                      <li key={i} className="flex items-start gap-3 text-gray-700">
+                        <Leaf className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                        <span>{prop}</span>
+                      </li>
+                    ))}
                   </ul>
-                  <Button className="w-full bg-purple-600 hover:bg-purple-700 rounded-xl py-6 text-base font-semibold shadow-lg">
-                    Em Breve
-                  </Button>
-                </CardContent>
-              </Card>
+                </div>
+              )}
             </div>
-          </TabsContent>
-        </Tabs>
-      </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Receita */}
+      {selectedReceita && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full my-8 max-h-[90vh] overflow-y-auto">
+            <div className="bg-gradient-to-br from-green-500 to-teal-600 p-6 sm:p-8 sticky top-0 z-10">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">{selectedReceita.nome}</h2>
+                  <div className="flex gap-2 flex-wrap">
+                    <span className="px-3 py-1 bg-white/20 rounded-full text-sm text-white font-medium">
+                      {selectedReceita.tipo}
+                    </span>
+                    <span className="px-3 py-1 bg-white/20 rounded-full text-sm text-white font-medium">
+                      {selectedReceita.categoria}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedReceita(null)}
+                  className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+                >
+                  <X className="w-6 h-6 text-white" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 sm:p-8 space-y-6">
+              {/* Info Rápida */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-green-50 rounded-xl p-4">
+                  <Clock className="w-5 h-5 text-green-600 mb-2" />
+                  <p className="text-sm text-gray-600">Tempo de Preparo</p>
+                  <p className="font-bold text-green-700">{selectedReceita.tempoPreparo}</p>
+                </div>
+                <div className="bg-green-50 rounded-xl p-4">
+                  <ChefHat className="w-5 h-5 text-green-600 mb-2" />
+                  <p className="text-sm text-gray-600">Porções</p>
+                  <p className="font-bold text-green-700">{selectedReceita.porcoes} pessoa(s)</p>
+                </div>
+              </div>
+
+              {/* Valor Nutricional */}
+              <div className="bg-emerald-50 rounded-xl p-6">
+                <h3 className="text-xl font-bold text-gray-800 mb-4">📊 Valor Nutricional (por porção)</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-600">Calorias</p>
+                    <p className="font-bold text-emerald-700">{selectedReceita.valorNutricional.calorias}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Proteínas</p>
+                    <p className="font-bold text-emerald-700">{selectedReceita.valorNutricional.proteinas}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Carboidratos</p>
+                    <p className="font-bold text-emerald-700">{selectedReceita.valorNutricional.carboidratos}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Fibras</p>
+                    <p className="font-bold text-emerald-700">{selectedReceita.valorNutricional.fibras}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Ingredientes */}
+              <div>
+                <h3 className="text-xl font-bold text-gray-800 mb-3">🛒 Ingredientes</h3>
+                <ul className="space-y-2">
+                  {selectedReceita.ingredientes.map((ing, i) => (
+                    <li key={i} className="flex items-start gap-3 text-gray-700">
+                      <span className="text-green-500 mt-1">•</span>
+                      <span>{ing}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Modo de Preparo */}
+              <div className="bg-green-50 rounded-xl p-6">
+                <h3 className="text-xl font-bold text-gray-800 mb-4">👨‍🍳 Modo de Preparo</h3>
+                <ol className="space-y-3">
+                  {selectedReceita.modoPreparo.map((passo, i) => (
+                    <li key={i} className="flex items-start gap-3 text-gray-700">
+                      <span className="font-bold text-green-600 flex-shrink-0">{i + 1}.</span>
+                      <span>{passo}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+
+              {/* Benefícios */}
+              <div>
+                <h3 className="text-xl font-bold text-gray-800 mb-3">✨ Benefícios</h3>
+                <ul className="space-y-2">
+                  {selectedReceita.beneficios.map((ben, i) => (
+                    <li key={i} className="flex items-start gap-3 text-gray-700">
+                      <Heart className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
+                      <span>{ben}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
